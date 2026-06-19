@@ -4,50 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#101820" />
-    <title>Hand Catch Camera Game</title>
+    <title>Hứng Điểm Bằng Tay</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
-      <section class="game-shell" aria-label="Hand Catch Camera Game">
+      <section class="game-shell" aria-label="Hứng điểm bằng tay">
         <video id="camera" playsinline muted autoplay></video>
         <canvas id="game" aria-label="Game canvas"></canvas>
 
         <div class="topbar">
           <div>
-            <span class="label">Score</span>
+            <span class="label">Điểm</span>
             <strong id="score">0</strong>
           </div>
           <div>
-            <span class="label">Time</span>
+            <span class="label">Thời gian</span>
             <strong id="time">60</strong>
           </div>
           <div>
-            <span class="label">Best</span>
+            <span class="label">Kỷ lục</span>
             <strong id="best">0</strong>
           </div>
         </div>
 
-        <div class="status" id="status">Nhan Bat dau de cap quyen camera</div>
+        <div class="status" id="status">Nhấn Bắt đầu để cấp quyền camera</div>
 
         <section class="panel" id="panel">
-          <h1>Hand Catch</h1>
-          <p>Dung ban tay truoc camera de dieu khien vung sang va hung cac diem roi.</p>
-          <button id="startButton" type="button" onclick="window.startHandCatchGame && window.startHandCatchGame(event)">Bat dau</button>
-          <button id="switchButton" type="button" class="secondary" onclick="window.switchHandCatchCamera && window.switchHandCatchCamera(event)">Doi camera</button>
-          <p class="hint">Can HTTPS khi test tren dien thoai. Localhost van duoc ho tro tren may tinh.</p>
+          <h1>Hứng Điểm</h1>
+          <p>Dùng bàn tay trước camera để điều khiển vùng sáng và hứng các điểm rơi.</p>
+          <button id="startButton" type="button" onclick="window.startHandCatchGame && window.startHandCatchGame(event)">Bắt đầu</button>
+          <button id="switchButton" type="button" class="secondary" onclick="window.switchHandCatchCamera && window.switchHandCatchCamera(event)">Đổi camera</button>
+          <p class="hint">Cần HTTPS khi test trên điện thoại. Localhost vẫn được hỗ trợ trên máy tính.</p>
         </section>
       </section>
     </main>
 
     <script>
-      window.HAND_CATCH_VERSION = "v4";
+      window.HAND_CATCH_VERSION = "v5";
       document.addEventListener("DOMContentLoaded", function () {
         var status = document.querySelector("#status");
-        if (status) status.textContent = "Nhan Bat dau de cap quyen camera";
+        if (status) status.textContent = "Nhấn Bắt đầu để cấp quyền camera";
       });
     </script>
-    <script src="./src/main.js?v=4"></script>
+    <script src="./src/main.js?v=5"></script>
   </body>
 </html>

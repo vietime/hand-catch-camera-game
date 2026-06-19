@@ -27,11 +27,62 @@ let gameEndsAt = 0;
 let hand = null;
 let touchControl = null;
 let fallers = [];
+let audioContext = null;
+let audioEnabled = false;
 
 bestEl.textContent = best;
 
 function setStatus(message) {
   statusEl.textContent = message;
+}
+
+function initAudio() {
+  if (audioEnabled) return;
+  var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+  audioContext = audioContext || new AudioContextClass();
+  if (audioContext.state === "suspended") {
+    audioContext.resume();
+  }
+  audioEnabled = true;
+}
+
+function playTone(frequency, duration, type, volume, whenOffset) {
+  if (!audioEnabled || !audioContext) return;
+  var startAt = audioContext.currentTime + (whenOffset || 0);
+  var oscillator = audioContext.createOscillator();
+  var gain = audioContext.createGain();
+  oscillator.type = type || "sine";
+  oscillator.frequency.setValueAtTime(frequency, startAt);
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(volume || 0.08, startAt + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration + 0.03);
+}
+
+function playStartSound() {
+  playTone(392, 0.11, "triangle", 0.07, 0);
+  playTone(523, 0.13, "triangle", 0.08, 0.09);
+  playTone(659, 0.16, "triangle", 0.08, 0.18);
+}
+
+function playCatchSound() {
+  playTone(740, 0.07, "square", 0.045, 0);
+  playTone(988, 0.09, "triangle", 0.05, 0.045);
+}
+
+function playEndSound() {
+  playTone(523, 0.14, "sawtooth", 0.055, 0);
+  playTone(392, 0.18, "sawtooth", 0.055, 0.12);
+  playTone(262, 0.24, "sine", 0.06, 0.28);
+}
+
+function playSwitchSound() {
+  playTone(330, 0.07, "triangle", 0.045, 0);
+  playTone(440, 0.08, "triangle", 0.045, 0.06);
 }
 
 if ("serviceWorker" in navigator) {
@@ -73,7 +124,7 @@ function resetGame() {
 
 async function initHandLandmarker() {
   if (handLandmarker) return;
-  setStatus("Dang tai model nhan dien tay...");
+  setStatus("Đang tải model nhận diện tay...");
 
   if (!mediaPipeVision) {
     mediaPipeVision = await loadMediaPipeVision();
@@ -107,7 +158,7 @@ function loadMediaPipeVision() {
     };
     moduleScript.onerror = function () {
       delete window[callbackName];
-      reject(new Error("Khong tai duoc MediaPipe"));
+      reject(new Error("Không tải được MediaPipe"));
     };
     document.head.appendChild(moduleScript);
   });
@@ -174,6 +225,7 @@ function updateGame(dt, now) {
       if (dx * dx + dy * dy < hitDistance * hitDistance) {
         score += 10;
         scoreEl.textContent = score;
+        playCatchSound();
         Object.assign(faller, randomFaller(width, height));
       }
     }
@@ -186,15 +238,16 @@ function updateGame(dt, now) {
   if (timeLeft <= 0) {
     started = false;
     panel.hidden = false;
-    startButton.textContent = "Choi lai";
+    startButton.textContent = "Chơi lại";
+    playEndSound();
     if (score > best) {
       best = score;
       localStorage.setItem("handCatchBest", String(best));
       bestEl.textContent = best;
     }
-    setStatus(`Het gio. Diem cua ban: ${score}`);
+    setStatus(`Hết giờ. Điểm của bạn: ${score}`);
   } else {
-    setStatus(hand ? "Dang theo doi ban tay" : "Dua ban tay vao khung hinh");
+    setStatus(hand ? "Đang theo dõi bàn tay" : "Đưa bàn tay vào khung hình");
   }
 }
 
@@ -242,27 +295,29 @@ function loop(now) {
 async function startGame() {
   if (started) return;
   try {
+    initAudio();
     startButton.disabled = true;
-    setStatus("Dang xin quyen camera...");
+    setStatus("Đang xin quyền camera...");
     await startCamera();
-    setStatus("Camera da mo. Dang tai nhan dien tay...");
+    playStartSound();
+    setStatus("Camera đã mở. Đang tải nhận diện tay...");
     resizeCanvas();
     resetGame();
     panel.hidden = true;
     started = true;
-    setStatus("Dua ban tay vao khung hinh. Neu cham man hinh, do la che do du phong.");
+    setStatus("Đưa bàn tay vào khung hình. Nếu chạm màn hình, đó là chế độ dự phòng.");
     initHandLandmarker()
       .then(function () {
-        setStatus("Nhan dien tay san sang");
+        setStatus("Nhận diện tay sẵn sàng");
       })
       .catch(function (error) {
         console.error(error);
-        setStatus("Camera da chay. Model tay loi, tam dung cham man hinh de test game.");
+        setStatus("Camera đã chạy. Model tay lỗi, tạm dùng chạm màn hình để test game.");
       });
   } catch (error) {
     console.error(error);
     const message = (error && error.message) || String(error);
-    setStatus(`Loi khoi dong: ${message.slice(0, 90)}`);
+    setStatus(`Lỗi khởi động: ${message.slice(0, 90)}`);
   } finally {
     startButton.disabled = false;
   }
@@ -273,10 +328,11 @@ async function switchCamera() {
   if (stream || started) {
     try {
       await startCamera();
-      setStatus(cameraFacing === "user" ? "Dang dung camera truoc" : "Dang dung camera sau");
+      playSwitchSound();
+      setStatus(cameraFacing === "user" ? "Đang dùng camera trước" : "Đang dùng camera sau");
     } catch (error) {
       console.error(error);
-      setStatus("Khong doi duoc camera tren thiet bi nay");
+      setStatus("Không đổi được camera trên thiết bị này");
     }
   }
 }
@@ -311,4 +367,4 @@ window.addEventListener("orientationchange", () => setTimeout(resizeCanvas, 250)
 
 resizeCanvas();
 requestAnimationFrame(loop);
-setStatus("Nhan Bat dau de cap quyen camera");
+setStatus("Nhấn Bắt đầu để cấp quyền camera");

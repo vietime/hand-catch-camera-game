@@ -1,33 +1,33 @@
-# Hand Catch Camera Game
+# Hứng Điểm Bằng Tay
 
-Prototype game HTML5/PWA dung camera dien thoai va MediaPipe Hand Landmarker.
+Prototype game HTML5/PWA dùng camera điện thoại và MediaPipe Hand Landmarker.
 
-## Chay local
+## Chạy local
 
-Dung mot static server bat ky:
+Dùng một static server bất kỳ:
 
 ```powershell
 .\start-server.ps1
 ```
 
-Mo tren may tinh:
+Mở trên máy tính:
 
 ```text
 http://localhost:5173
 ```
 
-## Test tren dien thoai
+## Test trên điện thoại
 
-Camera tren dien thoai can HTTPS. Co 2 cach nhanh:
+Camera trên điện thoại cần HTTPS. Có 2 cách nhanh:
 
-1. Deploy thu muc nay len Netlify, Vercel hoac GitHub Pages.
-2. Chay `.\start-server.ps1` va dung HTTPS tunnel nhu Cloudflare Tunnel hoac ngrok.
+1. Deploy thư mục này lên Netlify, Vercel hoặc GitHub Pages.
+2. Chạy `.\start-server.ps1` và dùng HTTPS tunnel như Cloudflare Tunnel hoặc ngrok.
 
-Sau khi mo link HTTPS tren dien thoai, bam `Bat dau`, cap quyen camera, dua ban tay vao khung hinh va hung cac diem roi.
+Sau khi mở link HTTPS trên điện thoại, bấm `Bắt đầu`, cấp quyền camera, đưa bàn tay vào khung hình và hứng các điểm rơi.
 
-## Ghi chu ky thuat
+## Ghi chú kỹ thuật
 
 - Camera: `navigator.mediaDevices.getUserMedia()`
-- Nhan dien tay: `@mediapipe/tasks-vision`
+- Nhận diện tay: `@mediapipe/tasks-vision`
 - Render game: HTML Canvas
-- PWA: `manifest.webmanifest` va `sw.js`
+- PWA: `manifest.webmanifest` và `sw.js`
