@@ -298,6 +298,10 @@ h3 {
   gap: 14px;
 }
 
+.two-column > :only-child {
+  max-width: 560px;
+}
+
 .card-form,
 .event-form {
   display: grid;
@@ -365,7 +369,8 @@ h3 {
 
 .member-card,
 .qr-card,
-.ledger-row {
+.ledger-row,
+.event-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px;
@@ -508,7 +513,28 @@ h3 {
 .pending-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.event-card {
+  display: grid;
+  gap: 12px;
+}
+
+.event-card details {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.event-card summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.event-detail {
+  margin-top: 10px;
 }
 
 .feature-grid {

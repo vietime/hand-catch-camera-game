@@ -86,8 +86,9 @@
         <nav class="tabs" aria-label="Chức năng">
           <button class="tab active" type="button" data-tab="members">Thành viên</button>
           <button class="tab" type="button" data-tab="deposit">Nạp quỹ</button>
-          <button class="tab admin-only" type="button" data-tab="events">Buổi ăn/nhậu</button>
+          <button class="tab" type="button" data-tab="events">Buổi ăn/nhậu</button>
           <button class="tab" type="button" data-tab="history">Lịch sử</button>
+          <button class="tab" type="button" data-tab="notifications">Thông báo</button>
           <button class="tab" type="button" data-tab="features">Đề xuất</button>
         </nav>
 
@@ -117,14 +118,14 @@
         <section id="deposit" class="tab-panel">
           <div class="section-head">
             <div>
-              <h2>Nạp quỹ và tự nhận diện</h2>
-              <p>Trong bản thật, webhook ngân hàng sẽ đọc nội dung chuyển khoản. Demo này mô phỏng bằng nội dung giao dịch.</p>
+              <h2>Nạp quỹ và xác nhận thủ công</h2>
+              <p>Thành viên chuyển khoản bằng mã nạp cá nhân, sau đó báo đã chuyển. Admin kiểm tra sao kê rồi xác nhận cộng tiền vào quỹ.</p>
             </div>
           </div>
 
           <div class="two-column admin-only">
             <form id="depositForm" class="card-form">
-              <h3>Ghi nhận nộp quỹ</h3>
+              <h3>Admin ghi nhận nộp quỹ trực tiếp</h3>
               <label>
                 Thành viên
                 <select id="depositMember" required></select>
@@ -138,20 +139,7 @@
                 <input id="depositNote" placeholder="Nộp quỹ tháng 6" />
               </label>
               <button type="submit">Lưu khoản nộp</button>
-            </form>
-
-            <form id="bankForm" class="card-form">
-              <h3>Mô phỏng sao kê ngân hàng</h3>
-              <label>
-                Nội dung chuyển khoản
-                <input id="bankContent" placeholder="QACMINH01" required />
-              </label>
-              <label>
-                Số tiền
-                <input id="bankAmount" type="number" min="1000" step="1000" placeholder="300000" required />
-              </label>
-              <button type="submit">Tự nhận diện thành viên</button>
-              <p class="hint">Nếu nội dung có mã nạp của thành viên, hệ thống sẽ tự cộng vào quỹ của người đó.</p>
+              <p class="hint">Dùng khi admin nhận tiền mặt hoặc cần nhập tay sau khi kiểm tra sao kê.</p>
             </form>
           </div>
 
@@ -189,7 +177,7 @@
             </div>
           </div>
 
-          <form id="eventForm" class="event-form">
+          <form id="eventForm" class="event-form admin-only">
             <label>
               Tên buổi
               <input id="eventName" placeholder="Nhậu tối thứ bảy" required />
@@ -222,7 +210,12 @@
             <button type="submit">Tạo buổi và phân bổ tiền</button>
           </form>
 
-          <div id="eventPreview" class="preview-box"></div>
+          <div id="eventPreview" class="preview-box admin-only"></div>
+
+          <div class="pending-section">
+            <h3>Lịch sử buổi ăn/nhậu</h3>
+            <div id="eventHistory" class="ledger"></div>
+          </div>
         </section>
 
         <section id="history" class="tab-panel">
@@ -233,6 +226,16 @@
             </div>
           </div>
           <div id="ledger" class="ledger"></div>
+        </section>
+
+        <section id="notifications" class="tab-panel">
+          <div class="section-head">
+            <div>
+              <h2>Thông báo</h2>
+              <p>Các thay đổi về buổi ăn/nhậu, phân bổ tiền và xác nhận nộp quỹ sẽ được ghi lại ở đây.</p>
+            </div>
+          </div>
+          <div id="notificationList" class="ledger"></div>
         </section>
 
         <section id="features" class="tab-panel">

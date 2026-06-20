@@ -49,7 +49,9 @@ const els = {
   splitMode: document.querySelector("#splitMode"),
   participantList: document.querySelector("#participantList"),
   eventPreview: document.querySelector("#eventPreview"),
+  eventHistory: document.querySelector("#eventHistory"),
   ledger: document.querySelector("#ledger"),
+  notificationList: document.querySelector("#notificationList"),
   resetDemo: document.querySelector("#resetDemo"),
 };
 
@@ -87,6 +89,7 @@ function loadState() {
     events: [],
     eventParticipants: [],
     depositRequests: [],
+    notifications: [],
   };
 }
 
@@ -190,6 +193,14 @@ async function loadCloudState() {
 
     if (requestResult.error) throw requestResult.error;
 
+    const notificationResult = await cloudClient
+      .from("notifications")
+      .select("*")
+      .eq("fund_id", FUND_ID)
+      .order("created_at", { ascending: true });
+
+    if (notificationResult.error) throw notificationResult.error;
+
     const eventsResult = await cloudClient
       .from("events")
       .select("*")
@@ -216,6 +227,7 @@ async function loadCloudState() {
       members: membersResult.data.map(memberFromRow),
       ledger: ledgerResult.data.map(ledgerFromRow),
       depositRequests: requestResult.data.map(depositRequestFromRow),
+      notifications: notificationResult.data.map(notificationFromRow),
       events: eventsResult.data.map(eventFromRow),
       eventParticipants: eventParticipants.map(eventParticipantFromRow),
     };
@@ -276,6 +288,13 @@ async function saveCloudStateNow() {
     const { error } = await cloudClient
       .from("deposit_requests")
       .upsert((state.depositRequests || []).map(depositRequestToRow));
+    if (error) throw error;
+  }
+
+  if ((state.notifications || []).length) {
+    const { error } = await cloudClient
+      .from("notifications")
+      .upsert((state.notifications || []).map(notificationToRow));
     if (error) throw error;
   }
 
@@ -364,6 +383,31 @@ function depositRequestFromRow(row) {
     ledgerEntryId: row.ledger_entry_id || "",
     createdAt: new Date(row.created_at).getTime(),
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).getTime() : null,
+  };
+}
+
+function notificationToRow(notification) {
+  return {
+    id: notification.id,
+    fund_id: FUND_ID,
+    member_id: notification.memberId || null,
+    title: notification.title,
+    body: notification.body,
+    type: notification.type || "info",
+    read_at: notification.readAt ? new Date(notification.readAt).toISOString() : null,
+    created_at: new Date(notification.createdAt || Date.now()).toISOString(),
+  };
+}
+
+function notificationFromRow(row) {
+  return {
+    id: row.id,
+    memberId: row.member_id || null,
+    title: row.title,
+    body: row.body,
+    type: row.type || "info",
+    readAt: row.read_at ? new Date(row.read_at).getTime() : null,
+    createdAt: new Date(row.created_at).getTime(),
   };
 }
 
@@ -531,7 +575,9 @@ function render() {
   renderQrBoard();
   renderDepositRequests();
   renderEventPreview();
+  renderEventHistory();
   renderLedger();
+  renderNotifications();
 }
 
 function renderDbStatus() {
@@ -552,9 +598,6 @@ function renderAuth() {
   els.currentUserName.textContent = `${session.name} (${session.email})`;
   els.currentRole.textContent = roleText;
 
-  if (isMember() && document.querySelector("#events.active")) {
-    activateTab("members");
-  }
 }
 
 function renderStats() {
@@ -738,6 +781,105 @@ function renderEventPreview() {
     .join("");
 }
 
+function eventParticipantsFor(eventId) {
+  return (state.eventParticipants || []).filter((participant) => participant.eventId === eventId);
+}
+
+function visibleEvents() {
+  const events = state.events || [];
+  if (isAdmin()) return events;
+  const memberId = session?.memberId;
+  const eventIds = new Set(
+    (state.eventParticipants || [])
+      .filter((participant) => participant.memberId === memberId)
+      .map((participant) => participant.eventId),
+  );
+  return events.filter((event) => eventIds.has(event.id));
+}
+
+function renderEventHistory() {
+  if (!els.eventHistory) return;
+  const events = visibleEvents().sort((a, b) => b.createdAt - a.createdAt);
+  if (!events.length) {
+    els.eventHistory.innerHTML = `<div class="empty">Chưa có buổi ăn/nhậu nào.</div>`;
+    return;
+  }
+
+  els.eventHistory.innerHTML = events
+    .map((event) => {
+      const participants = eventParticipantsFor(event.id);
+      const total = participants.reduce((sum, item) => sum + item.chargedAmount, 0);
+      const detailRows = participants
+        .map((participant) => {
+          const member = memberById(participant.memberId);
+          return `
+            <div class="split-row">
+              <div>
+                <strong>${escapeHtml(member?.name || "Không rõ thành viên")}</strong>
+                <div class="ledger-meta">${escapeHtml(participant.note || "Phần được phân bổ")}</div>
+              </div>
+              <strong>${money(participant.chargedAmount)}</strong>
+            </div>
+          `;
+        })
+        .join("");
+      const adminActions = isAdmin()
+        ? `
+          <div class="pending-actions">
+            <button class="ghost" type="button" data-rename-event="${event.id}">Sửa tên</button>
+            <button class="ghost" type="button" data-adjust-event="${event.id}">Điều chỉnh tiền</button>
+            <button class="ghost danger" type="button" data-delete-event="${event.id}">Xóa buổi</button>
+          </div>
+        `
+        : "";
+      return `
+        <article class="event-card">
+          <div class="ledger-row">
+            <div>
+              <strong>${escapeHtml(event.name)}</strong>
+              <div class="ledger-meta">${new Date(event.createdAt).toLocaleString("vi-VN")} - ${participants.length} người - ${money(total)}</div>
+            </div>
+            ${adminActions}
+          </div>
+          <details>
+            <summary>Xem chi tiết phân bổ</summary>
+            <div class="event-detail">${detailRows}</div>
+          </details>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function visibleNotifications() {
+  const notifications = state.notifications || [];
+  if (isAdmin()) return notifications;
+  return notifications.filter((item) => !item.memberId || item.memberId === session?.memberId);
+}
+
+function renderNotifications() {
+  if (!els.notificationList) return;
+  const notifications = visibleNotifications().sort((a, b) => b.createdAt - a.createdAt);
+  if (!notifications.length) {
+    els.notificationList.innerHTML = `<div class="empty">Chưa có thông báo nào.</div>`;
+    return;
+  }
+
+  els.notificationList.innerHTML = notifications
+    .map(
+      (notification) => `
+        <article class="ledger-row">
+          <div>
+            <strong>${escapeHtml(notification.title)}</strong>
+            <div class="ledger-meta">${new Date(notification.createdAt).toLocaleString("vi-VN")}</div>
+            <div class="muted">${escapeHtml(notification.body)}</div>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
 function renderLedger() {
   const entries = visibleLedgerEntries();
   if (!entries.length) {
@@ -830,6 +972,28 @@ function addDeposit(memberId, amount, note) {
   state.ledger.push(makeLedger("deposit", memberId, amount, note));
 }
 
+function makeNotification(memberId, title, body, type = "event") {
+  return {
+    id: makeId("notification"),
+    memberId,
+    title,
+    body,
+    type,
+    readAt: null,
+    createdAt: Date.now(),
+  };
+}
+
+async function addNotifications(notifications) {
+  if (!notifications.length) return;
+  state.notifications = state.notifications || [];
+  state.notifications.push(...notifications);
+  if (cloudClient && session?.cloud) {
+    const { error } = await cloudClient.from("notifications").insert(notifications.map(notificationToRow));
+    if (error) throw error;
+  }
+}
+
 async function createDepositRequest(amount, note) {
   const request = {
     id: makeId("deposit_request"),
@@ -892,6 +1056,159 @@ async function reviewDepositRequest(requestId, status) {
     saveState();
   }
 
+  render();
+}
+
+function recalculatedEventShares(eventId, newTotal) {
+  const participants = eventParticipantsFor(eventId);
+  if (!participants.length) return [];
+  const baseShare = Math.floor(newTotal / participants.length);
+  let remainder = newTotal - baseShare * participants.length;
+  return participants.map((participant) => {
+    let amount = baseShare;
+    if (remainder > 0) {
+      amount += 1;
+      remainder -= 1;
+    }
+    return {
+      ...participant,
+      chargedAmount: amount,
+      note: "Điều chỉnh lại sau khi admin sửa tổng tiền",
+    };
+  });
+}
+
+async function renameEvent(eventId) {
+  if (!requireAdmin()) return;
+  const event = (state.events || []).find((item) => item.id === eventId);
+  if (!event) return;
+  const newName = prompt("Tên buổi mới:", event.name);
+  if (!newName || newName.trim() === event.name) return;
+
+  const oldName = event.name;
+  event.name = newName.trim();
+  state.ledger
+    .filter((entry) => entry.eventId === eventId)
+    .forEach((entry) => {
+      entry.eventName = event.name;
+    });
+
+  const participants = eventParticipantsFor(eventId);
+  const notifications = participants.map((participant) =>
+    makeNotification(
+      participant.memberId,
+      "Buổi ăn/nhậu được đổi tên",
+      `Admin đổi "${oldName}" thành "${event.name}". Phần tiền của bạn không thay đổi.`,
+    ),
+  );
+
+  if (cloudClient && session?.cloud) {
+    const { error: eventError } = await cloudClient.from("events").update(eventToRow(event)).eq("id", eventId);
+    if (eventError) throw eventError;
+    const ledgerRows = state.ledger.filter((entry) => entry.eventId === eventId);
+    if (ledgerRows.length) {
+      const { error: ledgerError } = await cloudClient.from("ledger_entries").upsert(ledgerRows.map(ledgerToRow));
+      if (ledgerError) throw ledgerError;
+    }
+  }
+
+  await addNotifications(notifications);
+  saveState();
+  render();
+}
+
+async function adjustEventTotal(eventId) {
+  if (!requireAdmin()) return;
+  const event = (state.events || []).find((item) => item.id === eventId);
+  if (!event) return;
+  const currentTotal = eventParticipantsFor(eventId).reduce((sum, item) => sum + item.chargedAmount, 0);
+  const raw = prompt("Nhập tổng tiền mới:", String(currentTotal || event.totalAmount || 0));
+  if (!raw) return;
+  const newTotal = Number(raw);
+  if (!Number.isFinite(newTotal) || newTotal < 0) {
+    alert("Số tiền không hợp lệ.");
+    return;
+  }
+
+  const newShares = recalculatedEventShares(eventId, Math.round(newTotal));
+  if (!newShares.length) return;
+
+  event.totalAmount = Math.round(newTotal);
+  event.guestAmount = 0;
+  event.splitMode = "equal";
+
+  state.eventParticipants = (state.eventParticipants || []).map((participant) => {
+    const updated = newShares.find((share) => share.memberId === participant.memberId && share.eventId === eventId);
+    return updated || participant;
+  });
+
+  state.ledger = state.ledger.map((entry) => {
+    if (entry.eventId !== eventId || entry.type !== "event-share") return entry;
+    const updated = newShares.find((share) => share.memberId === entry.memberId);
+    if (!updated) return entry;
+    return {
+      ...entry,
+      amount: updated.chargedAmount,
+      note: updated.note,
+      eventName: event.name,
+    };
+  });
+
+  const notifications = newShares.map((share) =>
+    makeNotification(
+      share.memberId,
+      "Buổi ăn/nhậu được điều chỉnh tiền",
+      `Admin điều chỉnh "${event.name}". Phần mới của bạn là ${money(share.chargedAmount)}.`,
+    ),
+  );
+
+  if (cloudClient && session?.cloud) {
+    const { error: eventError } = await cloudClient.from("events").update(eventToRow(event)).eq("id", eventId);
+    if (eventError) throw eventError;
+    const { error: participantError } = await cloudClient
+      .from("event_participants")
+      .upsert(newShares.map(eventParticipantToRow));
+    if (participantError) throw participantError;
+    const ledgerRows = state.ledger.filter((entry) => entry.eventId === eventId);
+    const { error: ledgerError } = await cloudClient.from("ledger_entries").upsert(ledgerRows.map(ledgerToRow));
+    if (ledgerError) throw ledgerError;
+  }
+
+  await addNotifications(notifications);
+  saveState();
+  render();
+}
+
+async function deleteEvent(eventId) {
+  if (!requireAdmin()) return;
+  const event = (state.events || []).find((item) => item.id === eventId);
+  if (!event) return;
+  if (!confirm(`Xóa buổi "${event.name}" và hoàn lại phần tiền đã trừ?`)) return;
+
+  const participants = eventParticipantsFor(eventId);
+  const notifications = participants.map((participant) =>
+    makeNotification(
+      participant.memberId,
+      "Buổi ăn/nhậu đã bị xóa",
+      `Admin đã xóa "${event.name}". Phần tiền đã trừ của buổi này được gỡ khỏi số dư của bạn.`,
+    ),
+  );
+
+  state.ledger = state.ledger.filter((entry) => entry.eventId !== eventId);
+  state.eventParticipants = (state.eventParticipants || []).filter((participant) => participant.eventId !== eventId);
+  state.events = (state.events || []).filter((item) => item.id !== eventId);
+
+  if (cloudClient && session?.cloud) {
+    const { error: ledgerError } = await cloudClient.from("ledger_entries").delete().eq("event_id", eventId);
+    if (ledgerError) throw ledgerError;
+    const { error: participantError } = await cloudClient.from("event_participants").delete().eq("event_id", eventId);
+    if (participantError) throw participantError;
+    const { error: eventError } = await cloudClient.from("events").delete().eq("id", eventId);
+    if (eventError) throw eventError;
+  }
+
+  await addNotifications(notifications);
+  saveState();
   render();
 }
 
@@ -964,7 +1281,6 @@ function bindEvents() {
 
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.tab === "events" && !requireAdmin()) return;
       activateTab(button.dataset.tab);
       renderEventPreview();
     });
@@ -1000,7 +1316,7 @@ function bindEvents() {
     render();
   });
 
-  els.bankForm.addEventListener("submit", (event) => {
+  els.bankForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!requireAdmin()) return;
     const content = els.bankContent.value.toUpperCase();
@@ -1044,6 +1360,20 @@ function bindEvents() {
     }
   });
 
+  els.eventHistory?.addEventListener("click", async (event) => {
+    const renameId = event.target.dataset.renameEvent;
+    const adjustId = event.target.dataset.adjustEvent;
+    const deleteId = event.target.dataset.deleteEvent;
+    try {
+      if (renameId) await renameEvent(renameId);
+      if (adjustId) await adjustEventTotal(adjustId);
+      if (deleteId) await deleteEvent(deleteId);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Không xử lý được buổi ăn/nhậu.");
+    }
+  });
+
   els.qrBoard.addEventListener("click", async (event) => {
     const code = event.target.dataset.copyCode;
     if (!code) return;
@@ -1062,7 +1392,7 @@ function bindEvents() {
     els.eventForm.addEventListener(eventName, renderEventPreview);
   });
 
-  els.eventForm.addEventListener("submit", (event) => {
+  els.eventForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!requireAdmin()) return;
     const shares = calculateEventShares();
@@ -1098,6 +1428,15 @@ function bindEvents() {
         }),
       );
     }
+    await addNotifications(
+      shares.map((share) =>
+        makeNotification(
+          share.member.id,
+          "Bạn được phân bổ chi phí buổi ăn/nhậu",
+          `Buổi "${eventName}" đã được tạo. Phần của bạn là ${money(share.amount)}.`,
+        ),
+      ),
+    );
     els.eventForm.reset();
     render();
   });

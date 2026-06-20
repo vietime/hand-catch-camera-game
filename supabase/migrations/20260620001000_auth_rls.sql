@@ -80,6 +80,8 @@ drop policy if exists "ledger_admin_write" on public.ledger_entries;
 drop policy if exists "deposit_requests_select_admin_or_self" on public.deposit_requests;
 drop policy if exists "deposit_requests_member_insert" on public.deposit_requests;
 drop policy if exists "deposit_requests_admin_update" on public.deposit_requests;
+drop policy if exists "notifications_select_admin_or_self" on public.notifications;
+drop policy if exists "notifications_admin_insert" on public.notifications;
 drop policy if exists "events_select_admin_or_participant" on public.events;
 drop policy if exists "events_admin_write" on public.events;
 drop policy if exists "participants_select_admin_or_self" on public.event_participants;
@@ -149,6 +151,20 @@ create policy "deposit_requests_admin_update"
 on public.deposit_requests
 for update
 using (public.is_fund_admin(fund_id))
+with check (public.is_fund_admin(fund_id));
+
+create policy "notifications_select_admin_or_self"
+on public.notifications
+for select
+using (
+  public.is_fund_admin(fund_id)
+  or member_id is null
+  or member_id = public.current_profile_member_id(fund_id)
+);
+
+create policy "notifications_admin_insert"
+on public.notifications
+for insert
 with check (public.is_fund_admin(fund_id));
 
 create policy "events_select_admin_or_participant"
