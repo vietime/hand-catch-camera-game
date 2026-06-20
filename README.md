@@ -2,8 +2,9 @@
 
 Prototype web/PWA cho nhóm bạn quản lý quỹ ăn chơi:
 
-- Tài khoản demo cho quản trị quỹ và thành viên.
 - Tạo thành viên và mã nạp riêng cho từng người.
+- Chủ quỹ cấu hình tài khoản ngân hàng nhận quỹ.
+- Tạo VietQR cho từng thành viên với nội dung chuyển khoản riêng.
 - Ghi nhận khoản nộp quỹ thủ công.
 - Thành viên bấm `Tôi đã chuyển khoản` để tạo yêu cầu nộp quỹ chờ admin xác nhận.
 - Mô phỏng sao kê ngân hàng: hệ thống đọc nội dung chuyển khoản, tìm mã nạp và tự cộng tiền cho thành viên.
@@ -11,13 +12,6 @@ Prototype web/PWA cho nhóm bạn quản lý quỹ ăn chơi:
 - Gán tiền người lạ/khách mời cho một người trong nhóm.
 - Mỗi thành viên xem được đã nộp, đã dùng và số dư còn lại.
 - Lịch sử giao dịch theo dạng sổ cái để truy vết tiền vào/tiền ra.
-
-## Tài khoản demo
-
-```text
-Admin:      admin@quy.local / admin123
-Thành viên: minh@quy.local  / minh123
-```
 
 Admin đăng nhập bằng Supabase Auth, có thể quản lý thành viên, nộp quỹ, mô phỏng sao kê, tạo buổi ăn/nhậu và xem toàn bộ lịch sử.
 
@@ -47,7 +41,7 @@ Mở:
 http://localhost:5173
 ```
 
-Dữ liệu demo lưu trong `localStorage` của trình duyệt. Đăng nhập admin rồi bấm `Làm mới demo` để reset.
+Dữ liệu local lưu trong `localStorage` của trình duyệt nếu chưa cấu hình Supabase.
 
 ## CSDL hiện tại
 
@@ -102,7 +96,7 @@ Khi tạo buổi:
 Giai đoạn này dùng phương án QR tĩnh + admin xác nhận:
 
 1. Thành viên mở tab `Nạp quỹ`.
-2. Thành viên quét QR/mã nạp cá nhân và chuyển khoản với nội dung có mã nạp.
+2. Thành viên quét VietQR của quỹ hoặc copy thông tin chuyển khoản. Mỗi thành viên có nội dung chuyển khoản riêng.
 3. Thành viên nhập số tiền đã chuyển rồi bấm `Tôi đã chuyển khoản`.
 4. Hệ thống tạo một dòng trong bảng `deposit_requests` trạng thái `pending`.
 5. Admin kiểm tra sao kê ngân hàng.

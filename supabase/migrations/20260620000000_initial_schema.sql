@@ -1,6 +1,10 @@
 create table if not exists public.funds (
   id text primary key,
   name text not null,
+  bank_code text,
+  bank_account_number text,
+  bank_account_name text,
+  transfer_template text not null default 'QAC-{MA_THANH_VIEN}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -173,6 +173,28 @@
           </div>
 
           <div class="two-column admin-only">
+            <form id="fundBankForm" class="card-form">
+              <h3>Tài khoản nhận quỹ</h3>
+              <label>
+                Mã ngân hàng
+                <input id="fundBankCode" autocomplete="off" placeholder="Ví dụ: MB, VCB, TCB" required />
+              </label>
+              <label>
+                Số tài khoản
+                <input id="fundBankAccount" inputmode="numeric" autocomplete="off" placeholder="Nhập số tài khoản nhận tiền" required />
+              </label>
+              <label>
+                Tên chủ tài khoản
+                <input id="fundBankName" autocomplete="off" placeholder="Ví dụ: NGUYEN VAN A" required />
+              </label>
+              <label>
+                Mẫu nội dung chuyển khoản
+                <input id="fundTransferTemplate" autocomplete="off" placeholder="QAC-{MA_THANH_VIEN}" />
+              </label>
+              <button type="submit">Lưu tài khoản quỹ</button>
+              <p id="fundBankMessage" class="hint"></p>
+            </form>
+
             <form id="depositForm" class="card-form">
               <h3>Admin ghi nhận nộp quỹ trực tiếp</h3>
               <label>

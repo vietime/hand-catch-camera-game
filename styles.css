@@ -465,9 +465,31 @@ h3 {
   background: #ffffff;
 }
 
+.qr-image {
+  object-fit: contain;
+}
+
 .qr-card {
   display: grid;
   gap: 10px;
+}
+
+.transfer-info {
+  display: grid;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--soft);
+  font-size: 13px;
+}
+
+.transfer-info div {
+  display: grid;
+  gap: 2px;
+}
+
+.transfer-info span {
+  color: var(--muted);
 }
 
 .copy-code {

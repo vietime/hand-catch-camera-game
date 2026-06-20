@@ -48,6 +48,12 @@ const els = {
   depositMember: document.querySelector("#depositMember"),
   depositAmount: document.querySelector("#depositAmount"),
   depositNote: document.querySelector("#depositNote"),
+  fundBankForm: document.querySelector("#fundBankForm"),
+  fundBankCode: document.querySelector("#fundBankCode"),
+  fundBankAccount: document.querySelector("#fundBankAccount"),
+  fundBankName: document.querySelector("#fundBankName"),
+  fundTransferTemplate: document.querySelector("#fundTransferTemplate"),
+  fundBankMessage: document.querySelector("#fundBankMessage"),
   bankForm: document.querySelector("#bankForm"),
   bankContent: document.querySelector("#bankContent"),
   bankAmount: document.querySelector("#bankAmount"),
@@ -82,6 +88,7 @@ function activeFundId() {
 
 function emptyState() {
   return {
+    fund: emptyFund(),
     members: [],
     ledger: [],
     events: [],
@@ -89,6 +96,17 @@ function emptyState() {
     depositRequests: [],
     notifications: [],
     invites: [],
+  };
+}
+
+function emptyFund() {
+  return {
+    id: DEFAULT_FUND_ID,
+    name: "",
+    bankCode: "",
+    bankAccountNumber: "",
+    bankAccountName: "",
+    transferTemplate: "QAC-{MA_THANH_VIEN}",
   };
 }
 
@@ -116,7 +134,12 @@ function loadState() {
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      return isLegacyDemoSeedState(parsed) ? emptyState() : parsed;
+      if (isLegacyDemoSeedState(parsed)) return emptyState();
+      return {
+        ...emptyState(),
+        ...parsed,
+        fund: { ...emptyFund(), ...(parsed.fund || {}) },
+      };
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -280,6 +303,9 @@ async function loadCloudState() {
     cloudStatus = "Đang kết nối";
     renderDbStatus();
 
+    const fundResult = await cloudClient.from("funds").select("*").eq("id", activeFundId()).single();
+    if (fundResult.error) throw fundResult.error;
+
     const membersResult = await cloudClient
       .from("fund_members")
       .select("*")
@@ -290,6 +316,7 @@ async function loadCloudState() {
 
     if (!membersResult.data.length) {
       state = emptyState();
+      state.fund = fundFromRow(fundResult.data);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       cloudLoaded = true;
       cloudStatus = "Supabase/PostgreSQL";
@@ -354,6 +381,7 @@ async function loadCloudState() {
     }
 
     const loadedState = {
+      fund: fundFromRow(fundResult.data),
       members: membersResult.data.map(memberFromRow),
       ledger: ledgerResult.data.map(ledgerFromRow),
       depositRequests: requestResult.data.map(depositRequestFromRow),
@@ -399,6 +427,11 @@ function queueCloudSave() {
 
 async function saveCloudStateNow() {
   if (!cloudClient) return;
+
+  if (state.fund) {
+    const { error } = await cloudClient.from("funds").update(fundToRow(state.fund)).eq("id", activeFundId());
+    if (error) throw error;
+  }
 
   if (state.members.length) {
     const { error } = await cloudClient.from("fund_members").upsert(state.members.map(memberToRow));
@@ -447,6 +480,28 @@ async function deleteLegacyDemoSeedFromCloud() {
     const { error } = await cloudClient.from(table).delete().eq("fund_id", fundId);
     if (error) throw error;
   }
+}
+
+function fundToRow(fund) {
+  return {
+    name: fund.name || state.fund?.name || "Quỹ Ăn Chơi",
+    bank_code: (fund.bankCode || "").trim().toUpperCase() || null,
+    bank_account_number: (fund.bankAccountNumber || "").trim() || null,
+    bank_account_name: (fund.bankAccountName || "").trim().toUpperCase() || null,
+    transfer_template: (fund.transferTemplate || "QAC-{MA_THANH_VIEN}").trim() || "QAC-{MA_THANH_VIEN}",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function fundFromRow(row) {
+  return {
+    id: row.id,
+    name: row.name || "",
+    bankCode: row.bank_code || "",
+    bankAccountNumber: row.bank_account_number || "",
+    bankAccountName: row.bank_account_name || "",
+    transferTemplate: row.transfer_template || "QAC-{MA_THANH_VIEN}",
+  };
 }
 
 function memberToRow(member) {
@@ -749,6 +804,7 @@ function render() {
   renderMemberOptions();
   renderMembers();
   renderInvites();
+  renderFundBankForm();
   renderParticipants();
   renderQrBoard();
   renderDepositRequests();
@@ -756,6 +812,15 @@ function render() {
   renderEventHistory();
   renderLedger();
   renderNotifications();
+}
+
+function renderFundBankForm() {
+  if (!els.fundBankForm || !isAdmin()) return;
+  const fund = state.fund || emptyFund();
+  els.fundBankCode.value = fund.bankCode || "";
+  els.fundBankAccount.value = fund.bankAccountNumber || "";
+  els.fundBankName.value = fund.bankAccountName || "";
+  els.fundTransferTemplate.value = fund.transferTemplate || "QAC-{MA_THANH_VIEN}";
 }
 
 function renderDbStatus() {
@@ -898,21 +963,57 @@ function renderQrBoard() {
     return;
   }
 
+  const fund = state.fund || emptyFund();
+  const hasBankAccount = fund.bankCode && fund.bankAccountNumber && fund.bankAccountName;
   els.qrBoard.innerHTML = members
     .map(
-      (member) => `
+      (member) => {
+        const content = transferContentForMember(member);
+        const qr = hasBankAccount
+          ? `<img class="qr-code qr-image" src="${escapeHtml(vietQrUrl(fund, content))}" alt="QR chuyển khoản cho ${escapeHtml(member.name)}" />`
+          : fakeQrSvg(member.code);
+        const bankInfo = hasBankAccount
+          ? `
+            <div class="transfer-info">
+              <div><span>Ngân hàng</span><strong>${escapeHtml(fund.bankCode)}</strong></div>
+              <div><span>Số tài khoản</span><strong>${escapeHtml(fund.bankAccountNumber)}</strong></div>
+              <div><span>Chủ tài khoản</span><strong>${escapeHtml(fund.bankAccountName)}</strong></div>
+            </div>
+          `
+          : `<p class="hint">Admin cần nhập tài khoản nhận quỹ để tạo QR chuyển khoản ngân hàng.</p>`;
+        return `
         <article class="qr-card">
-          ${fakeQrSvg(member.code)}
+          ${qr}
           <div>
             <strong>${escapeHtml(member.name)}</strong>
             <div class="member-code">${escapeHtml(member.code)}</div>
           </div>
-          <p class="hint">Nội dung chuyển khoản: ${escapeHtml(member.code)}</p>
-          <button class="ghost copy-code" type="button" data-copy-code="${member.code}">Sao chép mã</button>
+          ${bankInfo}
+          <p class="hint">Nội dung chuyển khoản: <strong>${escapeHtml(content)}</strong></p>
+          <button class="ghost copy-code" type="button" data-copy-code="${escapeHtml(content)}">Sao chép nội dung</button>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
+}
+
+function transferContentForMember(member) {
+  const template = state.fund?.transferTemplate || "QAC-{MA_THANH_VIEN}";
+  return template
+    .replaceAll("{MA_THANH_VIEN}", member.code)
+    .replaceAll("{TEN_THANH_VIEN}", member.name)
+    .trim();
+}
+
+function vietQrUrl(fund, content) {
+  const bankCode = encodeURIComponent((fund.bankCode || "").trim());
+  const accountNumber = encodeURIComponent((fund.bankAccountNumber || "").trim());
+  const query = new URLSearchParams({
+    addInfo: content,
+    accountName: fund.bankAccountName || "",
+  });
+  return `https://img.vietqr.io/image/${bankCode}-${accountNumber}-compact2.png?${query.toString()}`;
 }
 
 function visibleDepositRequests() {
@@ -1639,6 +1740,44 @@ function bindEvents() {
     render();
   });
 
+  els.fundBankForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!requireAdmin()) return;
+    try {
+      state.fund = {
+        ...(state.fund || emptyFund()),
+        bankCode: els.fundBankCode.value.trim().toUpperCase(),
+        bankAccountNumber: els.fundBankAccount.value.trim(),
+        bankAccountName: els.fundBankName.value.trim().toUpperCase(),
+        transferTemplate: els.fundTransferTemplate.value.trim() || "QAC-{MA_THANH_VIEN}",
+      };
+      if (!state.fund.transferTemplate.includes("{MA_THANH_VIEN}")) {
+        state.fund.transferTemplate = `${state.fund.transferTemplate} {MA_THANH_VIEN}`.trim();
+      }
+      if (cloudClient && session?.cloud) {
+        const { error } = await cloudClient.from("funds").update(fundToRow(state.fund)).eq("id", activeFundId());
+        if (error) throw error;
+      } else {
+        saveState();
+      }
+      await addNotifications(
+        state.members.map((member) =>
+          makeNotification(
+            member.id,
+            "Tài khoản nhận quỹ đã được cập nhật",
+            "Admin vừa cập nhật thông tin chuyển khoản. Hãy kiểm tra QR/nội dung chuyển khoản trước khi nộp quỹ.",
+            "deposit",
+          ),
+        ),
+      );
+      els.fundBankMessage.textContent = "Đã lưu tài khoản nhận quỹ.";
+      render();
+    } catch (error) {
+      console.error(error);
+      els.fundBankMessage.textContent = error.message || "Không lưu được tài khoản nhận quỹ.";
+    }
+  });
+
   els.bankForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!requireAdmin()) return;
@@ -1702,9 +1841,9 @@ function bindEvents() {
     if (!code) return;
     const copied = await copyTextToClipboard(code);
     event.target.textContent = copied ? "Đã sao chép" : "Không copy được";
-    if (!copied) alert(`Không copy tự động được. Mã nạp là: ${code}`);
+    if (!copied) alert(`Không copy tự động được. Nội dung chuyển khoản là: ${code}`);
     setTimeout(() => {
-      event.target.textContent = "Sao chép mã";
+      event.target.textContent = "Sao chép nội dung";
     }, 1000);
   });
 
