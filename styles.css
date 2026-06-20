@@ -96,6 +96,64 @@ label {
   padding: 24px;
 }
 
+.login-screen {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 24px 0;
+}
+
+.login-card {
+  width: min(100%, 520px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.account-hints {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--soft);
+  color: #334155;
+  font-size: 13px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.user-pill {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+}
+
+.user-pill strong {
+  color: var(--primary);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .app-header {
   display: flex;
   align-items: flex-start;
@@ -159,7 +217,9 @@ h3 {
 .stat-card,
 .card-form,
 .tab-panel,
-.preview-box {
+.preview-box,
+.feature-card,
+.member-note {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
@@ -431,6 +491,38 @@ h3 {
   text-align: center;
 }
 
+.member-note {
+  margin-bottom: 14px;
+  padding: 14px;
+  color: #334155;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.feature-card {
+  padding: 16px;
+}
+
+.feature-card ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.feature-card li + li {
+  margin-top: 7px;
+}
+
+body.is-admin .member-only,
+body.is-member .admin-only {
+  display: none !important;
+}
+
 @media (max-width: 880px) {
   .app {
     padding: 16px;
@@ -440,10 +532,15 @@ h3 {
     display: grid;
   }
 
+  .header-actions {
+    justify-content: flex-start;
+  }
+
   .stats-grid,
   .member-list,
   .qr-board,
-  .participant-list {
+  .participant-list,
+  .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -458,7 +555,8 @@ h3 {
   .stats-grid,
   .member-list,
   .qr-board,
-  .participant-list {
+  .participant-list,
+  .feature-grid {
     grid-template-columns: 1fr;
   }
 

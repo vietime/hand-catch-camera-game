@@ -1,61 +1,81 @@
-# Quy An Choi
+# Quỹ Ăn Chơi
 
-Prototype web/PWA cho nhom ban quan ly quy an choi:
+Prototype web/PWA cho nhóm bạn quản lý quỹ ăn chơi:
 
-- Tao thanh vien va ma nap rieng cho tung nguoi.
-- Ghi nhan khoan nop quy thu cong.
-- Mo phong sao ke ngan hang: he thong doc noi dung chuyen khoan, tim ma nap va tu cong tien cho thanh vien.
-- Tao buoi an/nhau, chon thanh vien tham gia va tu phan bo bill.
-- Gan tien nguoi la/khach moi cho mot nguoi trong nhom.
-- Moi thanh vien thay duoc da nop, da dung va so du con lai.
-- Lich su giao dich theo dang so cai de truy vet tien vao/tien ra.
+- Tài khoản demo cho quản trị quỹ và thành viên.
+- Tạo thành viên và mã nạp riêng cho từng người.
+- Ghi nhận khoản nộp quỹ thủ công.
+- Mô phỏng sao kê ngân hàng: hệ thống đọc nội dung chuyển khoản, tìm mã nạp và tự cộng tiền cho thành viên.
+- Tạo buổi ăn/nhậu, chọn thành viên tham gia và tự phân bổ bill.
+- Gán tiền người lạ/khách mời cho một người trong nhóm.
+- Mỗi thành viên xem được đã nộp, đã dùng và số dư còn lại.
+- Lịch sử giao dịch theo dạng sổ cái để truy vết tiền vào/tiền ra.
 
-## Chay local
+## Tài khoản demo
+
+```text
+Admin:      admin@quy.local / admin123
+Thành viên: minh@quy.local  / minh123
+```
+
+Admin có thể quản lý thành viên, nộp quỹ, mô phỏng sao kê, tạo buổi ăn/nhậu và xem toàn bộ lịch sử.
+
+Thành viên chỉ xem số dư cá nhân, mã nạp của mình và lịch sử giao dịch của mình.
+
+## Chạy local
 
 ```powershell
 .\start-server.ps1
 ```
 
-Mo:
+Mở:
 
 ```text
 http://localhost:5173
 ```
 
-Du lieu demo luu trong `localStorage` cua trinh duyet. Bam `Lam moi demo` de reset.
+Dữ liệu demo lưu trong `localStorage` của trình duyệt. Đăng nhập admin rồi bấm `Làm mới demo` để reset.
 
-## Nguyen tac tinh tien
+## Nguyên tắc tính tiền
 
-So du tung thanh vien:
+Số dư từng thành viên:
 
 ```text
-so du = tong tien da nop - tong chi phi duoc phan bo
+số dư = tổng tiền đã nộp - tổng chi phí được phân bổ
 ```
 
-Khi tao buoi:
+Khi tạo buổi:
 
-- `Chia deu cho nguoi tham gia`: tong bill tru tien khach la, phan con lai chia deu.
-- `Nguoi duoc gan tra phan khach la`: bill chia deu cho nguoi tham gia, tien khach la cong them vao nguoi duoc gan.
+- `Chia đều cho người tham gia sau khi trừ khách lạ`: tổng bill trừ tiền khách lạ, phần còn lại chia đều.
+- `Chia đều bill, người được gán trả phần khách lạ`: bill chia đều cho người tham gia, tiền khách lạ cộng thêm vào người được gán.
 
-## De xuat tinh nang cho ban production
+## Đề xuất tính năng cho tài khoản admin
 
-- Dang nhap bang so dien thoai, Google hoac OTP.
-- Vai tro: admin quy, thu quy, thanh vien chi duoc xem.
-- QR nap tien that theo VietQR hoac link vi dien tu, noi dung chuyen khoan bat buoc chua ma thanh vien.
-- Webhook ngan hang/vi dien tu de tu nhan giao dich, doi soat so tien va noi dung.
-- Hang doi giao dich chua nhan dien de thu quy gan thu cong.
-- Anh hoa don, dia diem, ngay gio, nguoi tao buoi.
-- Cho phep split nang cao: chia deu, nguoi uong bia tra them, nguoi den muon tra %, mien phi cho khach.
-- Trang thai thanh vien: dang tham gia, tam dung, da roi nhom nhung giu lich su.
-- Thong bao Zalo/Telegram/Email khi nap quy, bi tru tien, so du am.
-- Xuat bao cao Excel/PDF theo thang.
-- Khoa so quy theo ky de chot cong no.
-- Audit log bat bien: ai sua gi, luc nao, ly do.
+- Tạo nhiều quỹ theo nhóm, mùa du lịch hoặc sự kiện.
+- Thêm/sửa trạng thái thành viên: đang tham gia, tạm dừng, đã rời nhóm.
+- Mời thành viên bằng link hoặc mã QR.
+- Duyệt giao dịch chưa nhận diện và gán thủ công cho thành viên.
+- Tạo buổi ăn/nhậu kèm ảnh hóa đơn, địa điểm, ngày giờ, người tạo.
+- Split nâng cao: chia theo phần, theo %, theo món, miễn phí cho khách.
+- Khóa sổ theo tháng để chốt công nợ.
+- Xuất báo cáo Excel/PDF.
+- Nhật ký thao tác bất biến: ai sửa gì, lúc nào, lý do.
+- Cảnh báo số dư âm và nhắc nộp quỹ tự động.
 
-## Huong kien truc goi y
+## Đề xuất tính năng cho tài khoản thành viên
 
-- Frontend: React/Vue/Svelte hoac PWA thuan neu app nho.
-- Backend: Node.js/NestJS, Laravel hoac Supabase.
-- Database: PostgreSQL voi cac bang `funds`, `members`, `ledger_entries`, `events`, `event_participants`, `bank_transactions`.
-- Thanh toan/nhan dien: VietQR cho noi dung chuyen khoan, webhook tu ngan hang/doi tac trung gian, job doi soat dinh ky.
-- Bao mat: moi phep cong/tru tien phai xu ly o backend, client chi gui yeu cau.
+- Xem số dư, tổng đã nộp, tổng đã dùng.
+- Xem mã QR/mã nội dung chuyển khoản cá nhân.
+- Xem lịch sử khoản nộp và khoản bị trừ.
+- Nhận thông báo khi nạp tiền thành công, bị phân bổ chi phí hoặc số dư âm.
+- Xác nhận tham gia buổi ăn/nhậu trước khi admin chốt bill.
+- Gửi yêu cầu kiểm tra lại hóa đơn hoặc khiếu nại phân bổ.
+- Xem bảng xếp hạng đóng quỹ vui vẻ: ai còn nhiều quỹ, ai đang âm.
+
+## Hướng kiến trúc gợi ý
+
+- Frontend: React/Vue/Svelte hoặc PWA thuần nếu app nhỏ.
+- Backend: Node.js/NestJS, Laravel hoặc Supabase.
+- Database: PostgreSQL với các bảng `funds`, `members`, `users`, `roles`, `ledger_entries`, `events`, `event_participants`, `bank_transactions`.
+- Thanh toán/nhận diện: VietQR cho nội dung chuyển khoản, webhook từ ngân hàng/đối tác trung gian, job đối soát định kỳ.
+- Bảo mật: mọi phép cộng/trừ tiền phải xử lý ở backend, client chỉ gửi yêu cầu.

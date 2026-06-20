@@ -4,168 +4,246 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
-    <title>Quy An Choi</title>
+    <title>Quỹ Ăn Chơi</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
-      <header class="app-header">
-        <div>
-          <p class="eyebrow">Prototype quan ly nhom</p>
-          <h1>Quy An Choi</h1>
+      <section id="loginScreen" class="login-screen" aria-label="Đăng nhập">
+        <div class="login-card">
+          <p class="eyebrow">Tài khoản demo</p>
+          <h1>Quỹ Ăn Chơi</h1>
           <p class="intro">
-            Tao quy, ghi nhan thanh vien nop tien, lap buoi an nhau va phan bo chi phi tu dong.
+            Đăng nhập bằng tài khoản quản trị hoặc tài khoản thành viên để xem cách phân quyền hoạt động.
           </p>
-        </div>
-        <button id="resetDemo" class="ghost danger" type="button">Lam moi demo</button>
-      </header>
 
-      <section class="stats-grid" aria-label="Tong quan quy">
-        <article class="stat-card">
-          <span>Tong quy</span>
-          <strong id="totalFund">0 d</strong>
-        </article>
-        <article class="stat-card">
-          <span>Da chi</span>
-          <strong id="totalSpent">0 d</strong>
-        </article>
-        <article class="stat-card">
-          <span>Thanh vien</span>
-          <strong id="memberCount">0</strong>
-        </article>
-        <article class="stat-card">
-          <span>Giao dich cho xu ly</span>
-          <strong id="pendingCount">0</strong>
-        </article>
-      </section>
-
-      <nav class="tabs" aria-label="Chuc nang">
-        <button class="tab active" type="button" data-tab="members">Thanh vien</button>
-        <button class="tab" type="button" data-tab="deposit">Nap quy</button>
-        <button class="tab" type="button" data-tab="events">Buoi an/nhau</button>
-        <button class="tab" type="button" data-tab="history">Lich su</button>
-      </nav>
-
-      <section id="members" class="tab-panel active">
-        <div class="section-head">
-          <div>
-            <h2>Thanh vien va so du</h2>
-            <p>Moi nguoi co ma nap rieng. So du = tien da nop - phan chi phi duoc phan bo.</p>
-          </div>
-        </div>
-
-        <form id="memberForm" class="form-grid">
-          <label>
-            Ten thanh vien
-            <input id="memberName" autocomplete="off" placeholder="Vi du: Minh" required />
-          </label>
-          <label>
-            Ngan hang/vi nap
-            <input id="memberWallet" autocomplete="off" placeholder="Momo, MB, Techcombank..." />
-          </label>
-          <button type="submit">Them thanh vien</button>
-        </form>
-
-        <div id="memberList" class="member-list"></div>
-      </section>
-
-      <section id="deposit" class="tab-panel">
-        <div class="section-head">
-          <div>
-            <h2>Nap quy va tu nhan dien</h2>
-            <p>Trong ban that, webhook ngan hang se doc noi dung chuyen khoan. Demo nay mo phong bang noi dung giao dich.</p>
-          </div>
-        </div>
-
-        <div class="two-column">
-          <form id="depositForm" class="card-form">
-            <h3>Ghi nhan nop quy</h3>
+          <form id="loginForm" class="login-form">
             <label>
-              Thanh vien
-              <select id="depositMember" required></select>
+              Tài khoản
+              <select id="loginAccount" required>
+                <option value="admin">admin@quy.local - Quản trị quỹ</option>
+                <option value="member">minh@quy.local - Thành viên</option>
+              </select>
             </label>
             <label>
-              So tien
-              <input id="depositAmount" type="number" min="1000" step="1000" placeholder="500000" required />
+              Mật khẩu
+              <input id="loginPassword" type="password" autocomplete="current-password" placeholder="admin123 hoặc minh123" required />
             </label>
-            <label>
-              Ghi chu
-              <input id="depositNote" placeholder="Nop quy thang 6" />
-            </label>
-            <button type="submit">Luu khoan nop</button>
+            <button type="submit">Đăng nhập</button>
+            <p id="loginMessage" class="hint"></p>
           </form>
 
-          <form id="bankForm" class="card-form">
-            <h3>Mo phong sao ke ngan hang</h3>
+          <div class="account-hints">
+            <span><strong>Admin:</strong> admin@quy.local / admin123</span>
+            <span><strong>Thành viên:</strong> minh@quy.local / minh123</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="appShell" hidden>
+        <header class="app-header">
+          <div>
+            <p class="eyebrow">Prototype quản lý nhóm</p>
+            <h1>Quỹ Ăn Chơi</h1>
+            <p class="intro">
+              Tạo quỹ, ghi nhận thành viên nộp tiền, lập buổi ăn nhậu và phân bổ chi phí tự động.
+            </p>
+          </div>
+          <div class="header-actions">
+            <div class="user-pill">
+              <span id="currentUserName">Chưa đăng nhập</span>
+              <strong id="currentRole">-</strong>
+            </div>
+            <button id="resetDemo" class="ghost danger admin-only" type="button">Làm mới demo</button>
+            <button id="logoutButton" class="ghost" type="button">Đăng xuất</button>
+          </div>
+        </header>
+
+        <section class="stats-grid" aria-label="Tổng quan quỹ">
+          <article class="stat-card">
+            <span>Tổng quỹ</span>
+            <strong id="totalFund">0 đ</strong>
+          </article>
+          <article class="stat-card">
+            <span>Đã chi</span>
+            <strong id="totalSpent">0 đ</strong>
+          </article>
+          <article class="stat-card">
+            <span>Thành viên</span>
+            <strong id="memberCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>Giao dịch chờ xử lý</span>
+            <strong id="pendingCount">0</strong>
+          </article>
+        </section>
+
+        <nav class="tabs" aria-label="Chức năng">
+          <button class="tab active" type="button" data-tab="members">Thành viên</button>
+          <button class="tab" type="button" data-tab="deposit">Nạp quỹ</button>
+          <button class="tab admin-only" type="button" data-tab="events">Buổi ăn/nhậu</button>
+          <button class="tab" type="button" data-tab="history">Lịch sử</button>
+          <button class="tab" type="button" data-tab="features">Đề xuất</button>
+        </nav>
+
+        <section id="members" class="tab-panel active">
+          <div class="section-head">
+            <div>
+              <h2>Thành viên và số dư</h2>
+              <p>Mỗi người có mã nạp riêng. Số dư = tiền đã nộp - phần chi phí được phân bổ.</p>
+            </div>
+          </div>
+
+          <form id="memberForm" class="form-grid admin-only">
             <label>
-              Noi dung chuyen khoan
-              <input id="bankContent" placeholder="QANCHOI ANHMINH01" required />
+              Tên thành viên
+              <input id="memberName" autocomplete="off" placeholder="Ví dụ: Minh" required />
             </label>
             <label>
-              So tien
-              <input id="bankAmount" type="number" min="1000" step="1000" placeholder="300000" required />
+              Ngân hàng/ví nạp
+              <input id="memberWallet" autocomplete="off" placeholder="MoMo, MB, Techcombank..." />
             </label>
-            <button type="submit">Tu nhan dien thanh vien</button>
-            <p class="hint">Neu noi dung co ma nap cua thanh vien, he thong se tu cong vao quy cua nguoi do.</p>
+            <button type="submit">Thêm thành viên</button>
           </form>
-        </div>
 
-        <div id="qrBoard" class="qr-board"></div>
-      </section>
+          <div id="memberList" class="member-list"></div>
+        </section>
 
-      <section id="events" class="tab-panel">
-        <div class="section-head">
-          <div>
-            <h2>Tao buoi an/nhau</h2>
-            <p>Chon nguoi tham gia, nhap tong bill, tien khach la va cach tinh. He thong tu tru so du tung nguoi.</p>
+        <section id="deposit" class="tab-panel">
+          <div class="section-head">
+            <div>
+              <h2>Nạp quỹ và tự nhận diện</h2>
+              <p>Trong bản thật, webhook ngân hàng sẽ đọc nội dung chuyển khoản. Demo này mô phỏng bằng nội dung giao dịch.</p>
+            </div>
           </div>
-        </div>
 
-        <form id="eventForm" class="event-form">
-          <label>
-            Ten buoi
-            <input id="eventName" placeholder="Nhau toi thu bay" required />
-          </label>
-          <label>
-            Tong bill
-            <input id="eventAmount" type="number" min="1000" step="1000" placeholder="1800000" required />
-          </label>
-          <label>
-            Tien nguoi la/khach moi
-            <input id="guestAmount" type="number" min="0" step="1000" value="0" />
-          </label>
-          <label>
-            Gan tien nguoi la cho
-            <select id="guestOwner"></select>
-          </label>
-          <label>
-            Cach phan bo
-            <select id="splitMode">
-              <option value="equal">Chia deu cho nguoi tham gia</option>
-              <option value="owner-pays-guest">Chia deu bill, nguoi duoc gan tra phan khach la</option>
-            </select>
-          </label>
+          <div class="two-column admin-only">
+            <form id="depositForm" class="card-form">
+              <h3>Ghi nhận nộp quỹ</h3>
+              <label>
+                Thành viên
+                <select id="depositMember" required></select>
+              </label>
+              <label>
+                Số tiền
+                <input id="depositAmount" type="number" min="1000" step="1000" placeholder="500000" required />
+              </label>
+              <label>
+                Ghi chú
+                <input id="depositNote" placeholder="Nộp quỹ tháng 6" />
+              </label>
+              <button type="submit">Lưu khoản nộp</button>
+            </form>
 
-          <fieldset class="participant-box">
-            <legend>Thanh vien tham gia</legend>
-            <div id="participantList" class="participant-list"></div>
-          </fieldset>
-
-          <button type="submit">Tao buoi va phan bo tien</button>
-        </form>
-
-        <div id="eventPreview" class="preview-box"></div>
-      </section>
-
-      <section id="history" class="tab-panel">
-        <div class="section-head">
-          <div>
-            <h2>Lich su quy</h2>
-            <p>Theo doi tien vao, tien ra, va cac giao dich chua nhan dien duoc.</p>
+            <form id="bankForm" class="card-form">
+              <h3>Mô phỏng sao kê ngân hàng</h3>
+              <label>
+                Nội dung chuyển khoản
+                <input id="bankContent" placeholder="QACMINH01" required />
+              </label>
+              <label>
+                Số tiền
+                <input id="bankAmount" type="number" min="1000" step="1000" placeholder="300000" required />
+              </label>
+              <button type="submit">Tự nhận diện thành viên</button>
+              <p class="hint">Nếu nội dung có mã nạp của thành viên, hệ thống sẽ tự cộng vào quỹ của người đó.</p>
+            </form>
           </div>
-        </div>
-        <div id="ledger" class="ledger"></div>
+
+          <div class="member-note member-only">
+            Thành viên chỉ xem mã nạp của mình. Quản trị quỹ xử lý đối soát và giao dịch chưa nhận diện.
+          </div>
+
+          <div id="qrBoard" class="qr-board"></div>
+        </section>
+
+        <section id="events" class="tab-panel">
+          <div class="section-head">
+            <div>
+              <h2>Tạo buổi ăn/nhậu</h2>
+              <p>Chọn người tham gia, nhập tổng bill, tiền khách lạ và cách tính. Hệ thống tự trừ số dư từng người.</p>
+            </div>
+          </div>
+
+          <form id="eventForm" class="event-form">
+            <label>
+              Tên buổi
+              <input id="eventName" placeholder="Nhậu tối thứ bảy" required />
+            </label>
+            <label>
+              Tổng bill
+              <input id="eventAmount" type="number" min="1000" step="1000" placeholder="1800000" required />
+            </label>
+            <label>
+              Tiền người lạ/khách mời
+              <input id="guestAmount" type="number" min="0" step="1000" value="0" />
+            </label>
+            <label>
+              Gán tiền người lạ cho
+              <select id="guestOwner"></select>
+            </label>
+            <label>
+              Cách phân bổ
+              <select id="splitMode">
+                <option value="equal">Chia đều cho người tham gia sau khi trừ khách lạ</option>
+                <option value="owner-pays-guest">Chia đều bill, người được gán trả phần khách lạ</option>
+              </select>
+            </label>
+
+            <fieldset class="participant-box">
+              <legend>Thành viên tham gia</legend>
+              <div id="participantList" class="participant-list"></div>
+            </fieldset>
+
+            <button type="submit">Tạo buổi và phân bổ tiền</button>
+          </form>
+
+          <div id="eventPreview" class="preview-box"></div>
+        </section>
+
+        <section id="history" class="tab-panel">
+          <div class="section-head">
+            <div>
+              <h2>Lịch sử quỹ</h2>
+              <p>Theo dõi tiền vào, tiền ra và các giao dịch chưa nhận diện được.</p>
+            </div>
+          </div>
+          <div id="ledger" class="ledger"></div>
+        </section>
+
+        <section id="features" class="tab-panel">
+          <div class="section-head">
+            <div>
+              <h2>Đề xuất tính năng theo tài khoản</h2>
+              <p>Những quyền nên tách rõ khi làm bản thật để quỹ minh bạch và khó sai số.</p>
+            </div>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h3>Tài khoản quản trị</h3>
+              <ul>
+                <li>Tạo quỹ, thêm/sửa trạng thái thành viên.</li>
+                <li>Ghi nhận nộp quỹ, đối soát giao dịch ngân hàng.</li>
+                <li>Tạo buổi ăn/nhậu và phân bổ chi phí.</li>
+                <li>Gán tiền khách lạ cho một người trong nhóm.</li>
+                <li>Khóa sổ theo tháng, xuất báo cáo Excel/PDF.</li>
+                <li>Xem nhật ký thao tác: ai sửa gì, lúc nào, lý do.</li>
+              </ul>
+            </article>
+            <article class="feature-card">
+              <h3>Tài khoản thành viên</h3>
+              <ul>
+                <li>Xem số dư cá nhân, đã nộp, đã dùng.</li>
+                <li>Xem mã QR/mã nội dung chuyển khoản của mình.</li>
+                <li>Xem lịch sử khoản nộp và khoản bị trừ của mình.</li>
+                <li>Nhận thông báo khi nạp tiền, bị phân bổ chi phí hoặc số dư âm.</li>
+                <li>Gửi yêu cầu kiểm tra lại bill hoặc khiếu nại phân bổ.</li>
+                <li>Xác nhận tham gia buổi ăn/nhậu trước khi chốt bill.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
       </section>
     </main>
 

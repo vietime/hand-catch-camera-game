@@ -1,4 +1,5 @@
-const STORAGE_KEY = "playFundApp.v1";
+const STORAGE_KEY = "playFundApp.v2";
+const SESSION_KEY = "playFundSession.v1";
 
 const currency = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -7,6 +8,15 @@ const currency = new Intl.NumberFormat("vi-VN", {
 });
 
 const els = {
+  loginScreen: document.querySelector("#loginScreen"),
+  appShell: document.querySelector("#appShell"),
+  loginForm: document.querySelector("#loginForm"),
+  loginAccount: document.querySelector("#loginAccount"),
+  loginPassword: document.querySelector("#loginPassword"),
+  loginMessage: document.querySelector("#loginMessage"),
+  currentUserName: document.querySelector("#currentUserName"),
+  currentRole: document.querySelector("#currentRole"),
+  logoutButton: document.querySelector("#logoutButton"),
   totalFund: document.querySelector("#totalFund"),
   totalSpent: document.querySelector("#totalSpent"),
   memberCount: document.querySelector("#memberCount"),
@@ -36,6 +46,7 @@ const els = {
 };
 
 let state = loadState();
+let session = loadSession();
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -50,22 +61,60 @@ function loadState() {
   const now = Date.now();
   const members = [
     makeMember("Minh", "MB Bank"),
-    makeMember("Hieu", "Momo"),
+    makeMember("Hiếu", "MoMo"),
     makeMember("Trang", "Techcombank"),
   ];
 
   return {
     members,
     ledger: [
-      makeLedger("deposit", members[0].id, 500000, "Nap quy ban dau", now - 900000),
-      makeLedger("deposit", members[1].id, 400000, "Nap quy ban dau", now - 800000),
-      makeLedger("deposit", members[2].id, 300000, "Nap quy ban dau", now - 700000),
+      makeLedger("deposit", members[0].id, 500000, "Nộp quỹ ban đầu", now - 900000),
+      makeLedger("deposit", members[1].id, 400000, "Nộp quỹ ban đầu", now - 800000),
+      makeLedger("deposit", members[2].id, 300000, "Nộp quỹ ban đầu", now - 700000),
     ],
   };
 }
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadSession() {
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+}
+
+function saveSession() {
+  if (session) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
+
+function demoAccounts() {
+  return {
+    admin: {
+      password: "admin123",
+      role: "admin",
+      name: "Quản trị quỹ",
+      email: "admin@quy.local",
+      memberId: null,
+    },
+    member: {
+      password: "minh123",
+      role: "member",
+      name: "Minh",
+      email: "minh@quy.local",
+      memberId: state.members[0]?.id || null,
+    },
+  };
 }
 
 function makeId(prefix) {
@@ -106,7 +155,25 @@ function makeLedger(type, memberId, amount, note, createdAt = Date.now(), extra 
 }
 
 function money(value) {
-  return currency.format(Math.round(Number(value) || 0)).replace("₫", "d");
+  return currency.format(Math.round(Number(value) || 0)).replace(/\s?₫/, " đ");
+}
+
+function isAdmin() {
+  return session?.role === "admin";
+}
+
+function isMember() {
+  return session?.role === "member";
+}
+
+function visibleMembers() {
+  if (isAdmin()) return state.members;
+  return state.members.filter((member) => member.id === session?.memberId);
+}
+
+function visibleLedgerEntries() {
+  if (isAdmin()) return state.ledger;
+  return state.ledger.filter((entry) => entry.memberId === session?.memberId);
 }
 
 function memberById(id) {
@@ -125,11 +192,6 @@ function getMemberTotals(memberId) {
   );
 }
 
-function getBalance(memberId) {
-  const totals = getMemberTotals(memberId);
-  return totals.deposited - totals.spent;
-}
-
 function allTotals() {
   return state.members.reduce(
     (totals, member) => {
@@ -144,6 +206,9 @@ function allTotals() {
 
 function render() {
   saveState();
+  saveSession();
+  renderAuth();
+  if (!session) return;
   renderStats();
   renderMemberOptions();
   renderMembers();
@@ -153,13 +218,30 @@ function render() {
   renderLedger();
 }
 
+function renderAuth() {
+  const loggedIn = Boolean(session);
+  els.loginScreen.hidden = loggedIn;
+  els.appShell.hidden = !loggedIn;
+  document.body.classList.toggle("is-admin", isAdmin());
+  document.body.classList.toggle("is-member", isMember());
+
+  if (!loggedIn) return;
+  const roleText = isAdmin() ? "Admin" : "Thành viên";
+  els.currentUserName.textContent = `${session.name} (${session.email})`;
+  els.currentRole.textContent = roleText;
+
+  if (isMember() && document.querySelector("#events.active")) {
+    activateTab("members");
+  }
+}
+
 function renderStats() {
   const totals = allTotals();
   const pending = state.ledger.filter((entry) => entry.type === "pending").length;
   els.totalFund.textContent = money(totals.deposited - totals.spent);
   els.totalSpent.textContent = money(totals.spent);
   els.memberCount.textContent = state.members.length;
-  els.pendingCount.textContent = pending;
+  els.pendingCount.textContent = isAdmin() ? pending : "Ẩn";
 }
 
 function renderMemberOptions() {
@@ -168,20 +250,24 @@ function renderMemberOptions() {
     .join("");
 
   els.depositMember.innerHTML = optionHtml;
-  els.guestOwner.innerHTML = `<option value="">Khong gan</option>${optionHtml}`;
+  els.guestOwner.innerHTML = `<option value="">Không gán</option>${optionHtml}`;
 }
 
 function renderMembers() {
-  if (!state.members.length) {
-    els.memberList.innerHTML = `<div class="empty">Chua co thanh vien nao.</div>`;
+  const members = visibleMembers();
+  if (!members.length) {
+    els.memberList.innerHTML = `<div class="empty">Chưa có thành viên nào.</div>`;
     return;
   }
 
-  els.memberList.innerHTML = state.members
+  els.memberList.innerHTML = members
     .map((member) => {
       const totals = getMemberTotals(member.id);
       const balance = totals.deposited - totals.spent;
       const balanceClass = balance < 0 ? "negative" : "positive";
+      const removeButton = isAdmin()
+        ? `<button class="ghost danger" type="button" data-remove-member="${member.id}">Xóa</button>`
+        : "";
       return `
         <article class="member-card">
           <div class="member-top">
@@ -189,14 +275,14 @@ function renderMembers() {
               <p class="member-name">${escapeHtml(member.name)}</p>
               <div class="member-code">${escapeHtml(member.code)}</div>
             </div>
-            <button class="ghost danger" type="button" data-remove-member="${member.id}">Xoa</button>
+            ${removeButton}
           </div>
           <div class="balance ${balanceClass}">${money(balance)}</div>
           <div class="mini-stats">
-            <span>Da nop <strong>${money(totals.deposited)}</strong></span>
-            <span>Da dung <strong>${money(totals.spent)}</strong></span>
+            <span>Đã nộp <strong>${money(totals.deposited)}</strong></span>
+            <span>Đã dùng <strong>${money(totals.spent)}</strong></span>
           </div>
-          <div class="muted">${escapeHtml(member.wallet || "Chua khai bao vi/gan hang")}</div>
+          <div class="muted">${escapeHtml(member.wallet || "Chưa khai báo ví/ngân hàng")}</div>
         </article>
       `;
     })
@@ -205,7 +291,7 @@ function renderMembers() {
 
 function renderParticipants() {
   if (!state.members.length) {
-    els.participantList.innerHTML = `<div class="empty">Them thanh vien truoc khi tao buoi.</div>`;
+    els.participantList.innerHTML = `<div class="empty">Thêm thành viên trước khi tạo buổi.</div>`;
     return;
   }
 
@@ -222,12 +308,13 @@ function renderParticipants() {
 }
 
 function renderQrBoard() {
-  if (!state.members.length) {
-    els.qrBoard.innerHTML = `<div class="empty">Chua co ma nap de hien thi.</div>`;
+  const members = visibleMembers();
+  if (!members.length) {
+    els.qrBoard.innerHTML = `<div class="empty">Chưa có mã nạp để hiển thị.</div>`;
     return;
   }
 
-  els.qrBoard.innerHTML = state.members
+  els.qrBoard.innerHTML = members
     .map(
       (member) => `
         <article class="qr-card">
@@ -236,8 +323,8 @@ function renderQrBoard() {
             <strong>${escapeHtml(member.name)}</strong>
             <div class="member-code">${escapeHtml(member.code)}</div>
           </div>
-          <p class="hint">Noi dung CK: ${escapeHtml(member.code)}</p>
-          <button class="ghost copy-code" type="button" data-copy-code="${member.code}">Copy ma</button>
+          <p class="hint">Nội dung chuyển khoản: ${escapeHtml(member.code)}</p>
+          <button class="ghost copy-code" type="button" data-copy-code="${member.code}">Sao chép mã</button>
         </article>
       `,
     )
@@ -260,13 +347,13 @@ function fakeQrSvg(code) {
     <rect x="82" y="10" width="26" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="5" />
     <rect x="10" y="82" width="26" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="5" />
   `;
-  return `<svg class="qr-code" viewBox="0 0 118 118" role="img" aria-label="Ma nap ${escapeHtml(code)}">${finder}<g fill="currentColor">${cells.join("")}</g></svg>`;
+  return `<svg class="qr-code" viewBox="0 0 118 118" role="img" aria-label="Mã nạp ${escapeHtml(code)}">${finder}<g fill="currentColor">${cells.join("")}</g></svg>`;
 }
 
 function renderEventPreview() {
   const shares = calculateEventShares();
   if (!shares.length) {
-    els.eventPreview.innerHTML = `<div class="empty">Chon thanh vien va nhap tong bill de xem truoc phan bo.</div>`;
+    els.eventPreview.innerHTML = `<div class="empty">Chọn thành viên và nhập tổng bill để xem trước phân bổ.</div>`;
     return;
   }
 
@@ -286,12 +373,13 @@ function renderEventPreview() {
 }
 
 function renderLedger() {
-  if (!state.ledger.length) {
-    els.ledger.innerHTML = `<div class="empty">Chua co lich su giao dich.</div>`;
+  const entries = visibleLedgerEntries();
+  if (!entries.length) {
+    els.ledger.innerHTML = `<div class="empty">Chưa có lịch sử giao dịch.</div>`;
     return;
   }
 
-  els.ledger.innerHTML = [...state.ledger]
+  els.ledger.innerHTML = [...entries]
     .sort((a, b) => b.createdAt - a.createdAt)
     .map((entry) => {
       const member = memberById(entry.memberId);
@@ -299,16 +387,16 @@ function renderLedger() {
       const amountClass = entry.type === "deposit" ? "in" : entry.type === "pending" ? "pending" : "out";
       const title =
         entry.type === "deposit"
-          ? "Nop quy"
+          ? "Nộp quỹ"
           : entry.type === "event-share"
-            ? `Chi phi: ${entry.eventName || "Buoi an/nhau"}`
-            : "Chua nhan dien";
+            ? `Chi phí: ${entry.eventName || "Buổi ăn/nhậu"}`
+            : "Chưa nhận diện";
       return `
         <article class="ledger-row">
           <div>
             <strong>${title}</strong>
             <div class="ledger-meta">
-              ${member ? escapeHtml(member.name) : "Khong ro thanh vien"} - ${new Date(entry.createdAt).toLocaleString("vi-VN")}
+              ${member ? escapeHtml(member.name) : "Không rõ thành viên"} - ${new Date(entry.createdAt).toLocaleString("vi-VN")}
             </div>
             <div class="muted">${escapeHtml(entry.note || "")}</div>
           </div>
@@ -351,7 +439,7 @@ function calculateEventShares() {
     shares.push({
       member,
       amount,
-      reason: mode === "equal" ? "Chia deu sau khi tru tien khach la" : "Chia deu tong bill",
+      reason: mode === "equal" ? "Chia đều sau khi trừ tiền khách lạ" : "Chia đều tổng bill",
     });
   }
 
@@ -359,12 +447,12 @@ function calculateEventShares() {
     const ownerShare = shares.find((share) => share.member.id === guestOwner.id);
     if (ownerShare) {
       ownerShare.amount += guestAmount;
-      ownerShare.reason = `${ownerShare.reason}, cong phan khach la ${money(guestAmount)}`;
+      ownerShare.reason = `${ownerShare.reason}, cộng phần khách lạ ${money(guestAmount)}`;
     } else {
       shares.push({
         member: guestOwner,
         amount: guestAmount,
-        reason: "Tra rieng phan khach la duoc gan",
+        reason: "Trả riêng phần khách lạ được gán",
       });
     }
   }
@@ -374,6 +462,17 @@ function calculateEventShares() {
 
 function addDeposit(memberId, amount, note) {
   state.ledger.push(makeLedger("deposit", memberId, amount, note));
+}
+
+function activateTab(tabId) {
+  document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === tabId));
+  document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.id === tabId));
+}
+
+function requireAdmin() {
+  if (isAdmin()) return true;
+  alert("Chức năng này chỉ dành cho tài khoản quản trị.");
+  return false;
 }
 
 function escapeHtml(value) {
@@ -386,17 +485,41 @@ function escapeHtml(value) {
 }
 
 function bindEvents() {
+  els.loginForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const account = demoAccounts()[els.loginAccount.value];
+    if (!account || els.loginPassword.value !== account.password) {
+      els.loginMessage.textContent = "Sai tài khoản hoặc mật khẩu demo.";
+      return;
+    }
+    session = {
+      role: account.role,
+      name: account.name,
+      email: account.email,
+      memberId: account.memberId,
+    };
+    els.loginPassword.value = "";
+    els.loginMessage.textContent = "";
+    activateTab("members");
+    render();
+  });
+
+  els.logoutButton.addEventListener("click", () => {
+    session = null;
+    render();
+  });
+
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
-      button.classList.add("active");
-      document.querySelector(`#${button.dataset.tab}`).classList.add("active");
+      if (button.dataset.tab === "events" && !requireAdmin()) return;
+      activateTab(button.dataset.tab);
+      renderEventPreview();
     });
   });
 
   els.memberForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!requireAdmin()) return;
     const name = els.memberName.value.trim();
     if (!name) return;
     state.members.push(makeMember(name, els.memberWallet.value));
@@ -406,10 +529,10 @@ function bindEvents() {
 
   els.memberList.addEventListener("click", (event) => {
     const id = event.target.dataset.removeMember;
-    if (!id) return;
+    if (!id || !requireAdmin()) return;
     const hasLedger = state.ledger.some((entry) => entry.memberId === id);
     if (hasLedger) {
-      alert("Thanh vien da co giao dich, khong nen xoa de giu lich su. Ban co the tao trang thai 'ngung tham gia' o ban that.");
+      alert("Thành viên đã có giao dịch, không nên xóa để giữ lịch sử. Bản thật nên dùng trạng thái 'ngừng tham gia'.");
       return;
     }
     state.members = state.members.filter((member) => member.id !== id);
@@ -418,20 +541,22 @@ function bindEvents() {
 
   els.depositForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    addDeposit(els.depositMember.value, Number(els.depositAmount.value), els.depositNote.value || "Nop quy thu cong");
+    if (!requireAdmin()) return;
+    addDeposit(els.depositMember.value, Number(els.depositAmount.value), els.depositNote.value || "Nộp quỹ thủ công");
     els.depositForm.reset();
     render();
   });
 
   els.bankForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!requireAdmin()) return;
     const content = els.bankContent.value.toUpperCase();
     const amount = Number(els.bankAmount.value) || 0;
     const member = state.members.find((item) => content.includes(item.code));
     if (member) {
-      addDeposit(member.id, amount, `Tu nhan dien sao ke: ${els.bankContent.value}`);
+      addDeposit(member.id, amount, `Tự nhận diện sao kê: ${els.bankContent.value}`);
     } else {
-      state.ledger.push(makeLedger("pending", null, amount, `Khong tim thay ma nap trong: ${els.bankContent.value}`));
+      state.ledger.push(makeLedger("pending", null, amount, `Không tìm thấy mã nạp trong: ${els.bankContent.value}`));
     }
     els.bankForm.reset();
     render();
@@ -442,9 +567,9 @@ function bindEvents() {
     if (!code) return;
     try {
       await navigator.clipboard.writeText(code);
-      event.target.textContent = "Da copy";
+      event.target.textContent = "Đã sao chép";
       setTimeout(() => {
-        event.target.textContent = "Copy ma";
+        event.target.textContent = "Sao chép mã";
       }, 1000);
     } catch {
       alert(code);
@@ -457,12 +582,13 @@ function bindEvents() {
 
   els.eventForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!requireAdmin()) return;
     const shares = calculateEventShares();
     if (!shares.length) {
-      alert("Can nhap tong bill va chon it nhat mot thanh vien.");
+      alert("Cần nhập tổng bill và chọn ít nhất một thành viên.");
       return;
     }
-    const eventName = els.eventName.value.trim() || "Buoi an/nhau";
+    const eventName = els.eventName.value.trim() || "Buổi ăn/nhậu";
     for (const share of shares) {
       state.ledger.push(
         makeLedger("event-share", share.member.id, share.amount, share.reason, Date.now(), {
@@ -475,8 +601,12 @@ function bindEvents() {
   });
 
   els.resetDemo.addEventListener("click", () => {
+    if (!requireAdmin()) return;
     localStorage.removeItem(STORAGE_KEY);
     state = loadState();
+    if (session?.role === "member") {
+      session.memberId = state.members[0]?.id || null;
+    }
     render();
   });
 }
