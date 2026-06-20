@@ -14,7 +14,7 @@ const els = {
   loginScreen: document.querySelector("#loginScreen"),
   appShell: document.querySelector("#appShell"),
   loginForm: document.querySelector("#loginForm"),
-  loginAccount: document.querySelector("#loginAccount"),
+  loginEmail: document.querySelector("#loginEmail"),
   loginPassword: document.querySelector("#loginPassword"),
   loginMessage: document.querySelector("#loginMessage"),
   ownerSignupForm: document.querySelector("#ownerSignupForm"),
@@ -592,25 +592,6 @@ function eventParticipantFromRow(row) {
     memberId: row.member_id,
     chargedAmount: Number(row.charged_amount) || 0,
     note: row.note || "",
-  };
-}
-
-function demoAccounts() {
-  return {
-    admin: {
-      password: "admin123",
-      role: "admin",
-      name: "Quản trị quỹ",
-      email: "admin@quy.local",
-      memberId: null,
-    },
-    member: {
-      password: "minh123",
-      role: "member",
-      name: "Minh",
-      email: "minh@quy.local",
-      memberId: state.members[0]?.id || null,
-    },
   };
 }
 
@@ -1478,31 +1459,18 @@ function bindEvents() {
 
   els.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const account = demoAccounts()[els.loginAccount.value];
-    if (!account) return;
+    const email = els.loginEmail.value.trim();
+    const password = els.loginPassword.value;
 
     try {
-      els.loginMessage.textContent = cloudClient ? "Đang đăng nhập Supabase..." : "";
-      if (cloudClient) {
-        const authResult = await cloudClient.auth.signInWithPassword({
-          email: account.email,
-          password: els.loginPassword.value,
-        });
-        if (authResult.error) throw authResult.error;
-        await loadCloudProfile(authResult.data.user);
-        await loadCloudState();
-      } else {
-        if (els.loginPassword.value !== account.password) {
-          throw new Error("Sai tài khoản hoặc mật khẩu demo.");
-        }
-        session = {
-          role: account.role,
-          name: account.name,
-          email: account.email,
-          memberId: account.memberId,
-          cloud: false,
-        };
-      }
+      if (!email || !password) throw new Error("Vui lòng nhập email và mật khẩu.");
+      if (!cloudClient) throw new Error("Chưa cấu hình Supabase nên chưa thể đăng nhập tài khoản thật.");
+
+      els.loginMessage.textContent = "Đang đăng nhập...";
+      const authResult = await cloudClient.auth.signInWithPassword({ email, password });
+      if (authResult.error) throw authResult.error;
+      await loadCloudProfile(authResult.data.user);
+      await loadCloudState();
 
       els.loginPassword.value = "";
       els.loginMessage.textContent = "";
