@@ -73,6 +73,7 @@ const els = {
   splitMode: document.querySelector("#splitMode"),
   participantList: document.querySelector("#participantList"),
   eventPreview: document.querySelector("#eventPreview"),
+  sharedHistory: document.querySelector("#sharedHistory"),
   eventHistory: document.querySelector("#eventHistory"),
   ledger: document.querySelector("#ledger"),
   notificationList: document.querySelector("#notificationList"),
@@ -685,6 +686,7 @@ function eventToRow(item) {
     guest_amount: item.guestAmount || 0,
     guest_owner_member_id: item.guestOwnerMemberId || null,
     split_mode: item.splitMode,
+    expense_type: item.expenseType || "event",
     created_by: item.createdBy || null,
     created_at: new Date(item.createdAt || Date.now()).toISOString(),
   };
@@ -698,6 +700,7 @@ function eventFromRow(row) {
     guestAmount: Number(row.guest_amount) || 0,
     guestOwnerMemberId: row.guest_owner_member_id || null,
     splitMode: row.split_mode,
+    expenseType: row.expense_type || "event",
     createdBy: row.created_by || "",
     createdAt: new Date(row.created_at).getTime(),
   };
@@ -845,6 +848,7 @@ function render() {
   renderQrBoard();
   renderDepositRequests();
   renderEventPreview();
+  renderSharedHistory();
   renderEventHistory();
   renderLedger();
   renderNotifications();
@@ -1186,18 +1190,25 @@ function visibleEvents() {
   return events.filter((event) => eventIds.has(event.id));
 }
 
-function renderEventHistory() {
-  if (!els.eventHistory) return;
-  const events = visibleEvents().sort((a, b) => b.createdAt - a.createdAt);
+function eventExpenseType(event) {
+  return event.expenseType || "event";
+}
+
+function renderExpenseHistory(target, expenseType, emptyText) {
+  if (!target) return;
+  const events = visibleEvents()
+    .filter((event) => eventExpenseType(event) === expenseType)
+    .sort((a, b) => b.createdAt - a.createdAt);
   if (!events.length) {
-    els.eventHistory.innerHTML = `<div class="empty">Chưa có khoản chi hoặc buổi ăn/nhậu nào.</div>`;
+    target.innerHTML = `<div class="empty">${emptyText}</div>`;
     return;
   }
 
-  els.eventHistory.innerHTML = events
+  target.innerHTML = events
     .map((event) => {
       const participants = eventParticipantsFor(event.id);
       const total = participants.reduce((sum, item) => sum + item.chargedAmount, 0);
+      const eventIcon = expenseType === "shared-expense" ? "receipt" : "sparkle";
       const detailRows = participants
         .map((participant) => {
           const member = memberById(participant.memberId);
@@ -1224,7 +1235,7 @@ function renderEventHistory() {
       return `
         <article class="event-card">
           <div class="ledger-row app-list-row">
-            <div class="row-icon">${icon("receipt")}</div>
+            <div class="row-icon">${icon(eventIcon)}</div>
             <div>
               <strong>${escapeHtml(event.name)}</strong>
               <div class="ledger-meta">${new Date(event.createdAt).toLocaleString("vi-VN")} - ${participants.length} người - ${money(total)}</div>
@@ -1239,6 +1250,14 @@ function renderEventHistory() {
       `;
     })
     .join("");
+}
+
+function renderSharedHistory() {
+  renderExpenseHistory(els.sharedHistory, "shared-expense", "Chưa có khoản chi chung nào.");
+}
+
+function renderEventHistory() {
+  renderExpenseHistory(els.eventHistory, "event", "Chưa có buổi nhậu nào.");
 }
 
 function visibleNotifications() {
@@ -1388,6 +1407,7 @@ async function createAllocatedExpense({ name, totalAmount, shares, type = "event
     guestAmount,
     guestOwnerMemberId,
     splitMode,
+    expenseType: type,
     createdBy: session?.email || "",
     createdAt,
   });
@@ -1718,7 +1738,8 @@ function focusPrimaryAction(tabId) {
   const targets = {
     members: els.memberName,
     deposit: isMember() ? els.requestAmount : els.depositAmount,
-    events: els.expenseName || els.eventName,
+    shared: els.expenseName,
+    events: els.eventName,
     history: els.ledger,
     notifications: els.notificationList,
   };
@@ -1877,17 +1898,19 @@ function bindEvents() {
   });
 
   els.inviteList?.addEventListener("click", async (event) => {
-    const link = event.target.dataset.copyInvite;
-    const revokeId = event.target.dataset.revokeInvite;
+    const button = event.target.closest("[data-copy-invite], [data-revoke-invite]");
+    if (!button) return;
+    const link = button.dataset.copyInvite;
+    const revokeId = button.dataset.revokeInvite;
     try {
       if (link) {
         const copied = await copyTextToClipboard(link);
-        event.target.textContent = copied ? "Đã copy" : "Không copy được";
+        button.textContent = copied ? "Đã copy" : "Không copy được";
         if (!copied && els.memberInviteMessage) {
           els.memberInviteMessage.textContent = "Trình duyệt đang chặn copy tự động. Hãy bấm giữ vào link mời rồi chọn Sao chép.";
         }
         setTimeout(() => {
-          event.target.textContent = "Copy link";
+          button.textContent = "Copy link";
         }, 1000);
       }
       if (revokeId) await revokeInvite(revokeId);
@@ -1900,7 +1923,7 @@ function bindEvents() {
   });
 
   els.memberList.addEventListener("click", (event) => {
-    const id = event.target.dataset.removeMember;
+    const id = event.target.closest("[data-remove-member]")?.dataset.removeMember;
     if (!id || !requireAdmin()) return;
     const hasLedger = state.ledger.some((entry) => entry.memberId === id);
     if (hasLedger) {
@@ -1990,8 +2013,10 @@ function bindEvents() {
   });
 
   els.depositRequestList?.addEventListener("click", async (event) => {
-    const approveId = event.target.dataset.approveRequest;
-    const rejectId = event.target.dataset.rejectRequest;
+    const button = event.target.closest("[data-approve-request], [data-reject-request]");
+    if (!button) return;
+    const approveId = button.dataset.approveRequest;
+    const rejectId = button.dataset.rejectRequest;
     try {
       if (approveId) await reviewDepositRequest(approveId, "approved");
       if (rejectId) await reviewDepositRequest(rejectId, "rejected");
@@ -2002,9 +2027,11 @@ function bindEvents() {
   });
 
   els.eventHistory?.addEventListener("click", async (event) => {
-    const renameId = event.target.dataset.renameEvent;
-    const adjustId = event.target.dataset.adjustEvent;
-    const deleteId = event.target.dataset.deleteEvent;
+    const action = event.target.closest("[data-rename-event], [data-adjust-event], [data-delete-event]");
+    if (!action) return;
+    const renameId = action.dataset.renameEvent;
+    const adjustId = action.dataset.adjustEvent;
+    const deleteId = action.dataset.deleteEvent;
     try {
       if (renameId) await renameEvent(renameId);
       if (adjustId) await adjustEventTotal(adjustId);
@@ -2015,14 +2042,31 @@ function bindEvents() {
     }
   });
 
+  els.sharedHistory?.addEventListener("click", async (event) => {
+    const action = event.target.closest("[data-rename-event], [data-adjust-event], [data-delete-event]");
+    if (!action) return;
+    const renameId = action.dataset.renameEvent;
+    const adjustId = action.dataset.adjustEvent;
+    const deleteId = action.dataset.deleteEvent;
+    try {
+      if (renameId) await renameEvent(renameId);
+      if (adjustId) await adjustEventTotal(adjustId);
+      if (deleteId) await deleteEvent(deleteId);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Khong xu ly duoc khoan chi.");
+    }
+  });
+
   els.qrBoard.addEventListener("click", async (event) => {
-    const code = event.target.dataset.copyCode;
+    const button = event.target.closest("[data-copy-code]");
+    const code = button?.dataset.copyCode;
     if (!code) return;
     const copied = await copyTextToClipboard(code);
-    event.target.textContent = copied ? "Đã sao chép" : "Không copy được";
+    button.textContent = copied ? "Đã sao chép" : "Không copy được";
     if (!copied) alert(`Không copy tự động được. Nội dung chuyển khoản là: ${code}`);
     setTimeout(() => {
-      event.target.textContent = "Sao chép nội dung";
+      button.textContent = "Sao chép nội dung";
     }, 1000);
   });
 

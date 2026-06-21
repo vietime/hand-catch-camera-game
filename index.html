@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0f766e" />
     <title>Quỹ Ăn Chơi</title>
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=20260621-5" />
+    <link rel="stylesheet" href="./styles.css?v=20260621-6" />
   </head>
   <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -182,17 +182,23 @@
             <strong>Nạp quỹ</strong>
             <small>QR và báo chuyển khoản</small>
           </button>
-          <button id="quickExpenseButton" class="quick-action admin-only" type="button" data-quick-tab="events">
+          <button id="quickExpenseButton" class="quick-action admin-only" type="button" data-quick-tab="shared">
             <span><svg class="icon"><use href="#icon-receipt"></use></svg></span>
-            <strong>Chia bill</strong>
-            <small>Tạo kèo thật gọn</small>
+            <strong>Chi chung</strong>
+            <small>Chia đều cả quỹ</small>
+          </button>
+          <button id="quickPartyButton" class="quick-action admin-only" type="button" data-quick-tab="events">
+            <span><svg class="icon"><use href="#icon-sparkle"></use></svg></span>
+            <strong>Buổi nhậu</strong>
+            <small>Chọn người tham gia</small>
           </button>
         </section>
 
         <nav class="tabs" aria-label="Chức năng">
           <button class="tab active" type="button" data-tab="members"><svg class="icon"><use href="#icon-users"></use></svg><span>Thành viên</span></button>
           <button class="tab" type="button" data-tab="deposit"><svg class="icon"><use href="#icon-qr"></use></svg><span>Nạp quỹ</span></button>
-          <button class="tab" type="button" data-tab="events"><svg class="icon"><use href="#icon-receipt"></use></svg><span>Chi phí</span></button>
+          <button class="tab" type="button" data-tab="shared"><svg class="icon"><use href="#icon-receipt"></use></svg><span>Chi chung</span></button>
+          <button class="tab" type="button" data-tab="events"><svg class="icon"><use href="#icon-sparkle"></use></svg><span>Buổi nhậu</span></button>
           <button class="tab" type="button" data-tab="history"><svg class="icon"><use href="#icon-history"></use></svg><span>Lịch sử</span></button>
           <button class="tab" type="button" data-tab="notifications"><svg class="icon"><use href="#icon-bell"></use></svg><span>Thông báo</span></button>
           <button class="tab tab-secondary" type="button" data-tab="features"><svg class="icon"><use href="#icon-sparkle"></use></svg><span>Đề xuất</span></button>
@@ -303,11 +309,11 @@
           </div>
         </section>
 
-        <section id="events" class="tab-panel">
+        <section id="shared" class="tab-panel">
           <div class="section-head">
             <div>
-              <h2>Tạo buổi ăn/nhậu</h2>
-              <p>Tạo buổi ăn/nhậu hoặc khoản chi chung. Hệ thống tự trừ số dư thành viên theo phần được phân bổ.</p>
+              <h2>Chi chung</h2>
+              <p>Tạo khoản chi áp dụng cho toàn bộ thành viên hiện có. Khoản này sẽ được chia đều để tránh nhầm với bill buổi nhậu.</p>
             </div>
           </div>
 
@@ -325,6 +331,20 @@
               <button class="icon-button" type="submit"><svg class="icon"><use href="#icon-receipt"></use></svg><span>Tạo khoản chi và chia đều</span></button>
               <p class="hint">Khoản chi sẽ được chia đều và trừ vào tất cả thành viên hiện có trong quỹ.</p>
             </form>
+          </div>
+
+          <div class="pending-section">
+            <h3>Lịch sử chi chung</h3>
+            <div id="sharedHistory" class="ledger"></div>
+          </div>
+        </section>
+
+        <section id="events" class="tab-panel">
+          <div class="section-head">
+            <div>
+              <h2>Buổi nhậu</h2>
+              <p>Tạo bill theo người tham gia, có thể tách tiền khách lạ và gán người trả phần khách.</p>
+            </div>
           </div>
 
           <form id="eventForm" class="event-form admin-only">
@@ -363,7 +383,7 @@
           <div id="eventPreview" class="preview-box admin-only"></div>
 
           <div class="pending-section">
-            <h3>Lịch sử khoản chi và buổi ăn/nhậu</h3>
+            <h3>Lịch sử buổi nhậu</h3>
             <div id="eventHistory" class="ledger"></div>
           </div>
         </section>
@@ -428,7 +448,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="./src/config.js?v=20260621-5"></script>
-    <script src="./src/main.js?v=20260621-5"></script>
+    <script src="./src/config.js?v=20260621-6"></script>
+    <script src="./src/main.js?v=20260621-6"></script>
   </body>
 </html>

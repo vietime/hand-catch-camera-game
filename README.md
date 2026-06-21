@@ -10,6 +10,7 @@ Prototype web/PWA cho nhóm bạn quản lý quỹ ăn chơi:
 - Mô phỏng sao kê ngân hàng: hệ thống đọc nội dung chuyển khoản, tìm mã nạp và tự cộng tiền cho thành viên.
 - Tạo khoản chi chung và tự chia đều cho tất cả thành viên.
 - Tạo buổi ăn/nhậu, chọn thành viên tham gia và tự phân bổ bill.
+- Tách riêng `Chi chung` và `Buổi nhậu` để admin không nhầm giữa khoản chia đều toàn quỹ và bill theo người tham gia.
 - Gán tiền người lạ/khách mời cho một người trong nhóm.
 - Mỗi thành viên xem được đã nộp, đã dùng và số dư còn lại.
 - Lịch sử giao dịch theo dạng sổ cái để truy vết tiền vào/tiền ra.

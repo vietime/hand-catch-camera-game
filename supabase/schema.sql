@@ -77,6 +77,7 @@ create table if not exists public.events (
   guest_amount bigint not null default 0 check (guest_amount >= 0),
   guest_owner_member_id text references public.fund_members(id) on delete set null,
   split_mode text not null check (split_mode in ('equal', 'owner-pays-guest')),
+  expense_type text not null default 'event' check (expense_type in ('shared-expense', 'event')),
   created_by text,
   created_at timestamptz not null default now()
 );
@@ -126,6 +127,7 @@ create index if not exists notifications_member_id_idx on public.notifications(m
 create index if not exists fund_invites_fund_id_created_at_idx on public.fund_invites(fund_id, created_at desc);
 create index if not exists fund_invites_code_idx on public.fund_invites(invite_code);
 create index if not exists events_fund_id_created_at_idx on public.events(fund_id, created_at desc);
+create index if not exists events_fund_expense_type_created_at_idx on public.events(fund_id, expense_type, created_at desc);
 create index if not exists profiles_fund_id_idx on public.profiles(fund_id);
 create index if not exists profiles_member_id_idx on public.profiles(member_id);
 create unique index if not exists profiles_fund_member_unique_idx
