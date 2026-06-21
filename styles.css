@@ -309,6 +309,11 @@ label {
   box-shadow: none;
 }
 
+.fund-switcher select:disabled {
+  color: var(--ink);
+  opacity: 1;
+}
+
 .logout-icon {
   width: 44px;
   min-width: 44px;
@@ -1078,6 +1083,10 @@ body.is-logged-in .fab {
   }
 
   .tab-secondary {
+    display: none;
+  }
+
+  body.is-logged-in .fab {
     display: none;
   }
 }

@@ -877,7 +877,6 @@ function renderAuth() {
   els.currentRole.textContent = roleText;
   if (els.fundSelect) {
     const profiles = session.profiles || [];
-    els.fundSelect.hidden = profiles.length <= 1;
     els.fundSelect.disabled = profiles.length <= 1;
     els.fundSelect.innerHTML = profiles
       .map(
